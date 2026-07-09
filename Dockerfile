@@ -17,10 +17,11 @@ COPY --from=builder /app/out/package-lock.json ./package-lock.json
 RUN npm install
 
 COPY --from=builder /app/out/full/ .
+COPY --from=builder /app/tsconfig.base.json ./tsconfig.base.json
 
 # Generate Prisma client and build all workspaces
 RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
-RUN npm run build --workspaces
+RUN npm run build --workspaces --if-present
 
 # ── Stage 3: Runner ────────────────────────────────────────
 FROM node:20-alpine AS runner
