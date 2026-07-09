@@ -6,7 +6,7 @@ RUN npm install -g turbo
 
 COPY . .
 # Prune the workspace for production (removes unused packages)
-RUN turbo prune @aegis/api --docker
+RUN turbo prune @aegis/api @aegis/web --docker
 
 # ── Stage 2: Installer ──────────────────────────────────────
 FROM node:20-alpine AS installer
