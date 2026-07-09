@@ -31,6 +31,7 @@ ENV NODE_ENV=production
 ENV AEGIS_LLM_PROVIDER=deterministic
 ENV PORT=3000
 ENV HOST=0.0.0.0
+ENV DATABASE_URL="file:./aegis.db"
 
 # Copy necessary files from installer
 COPY --from=installer /app/node_modules ./node_modules
