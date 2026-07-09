@@ -1,0 +1,86 @@
+{
+  "$schema": "AEGIS Detection Rules — All thresholds are configurable here, NEVER hardcoded in source.",
+  "rules": [
+    {
+      "id": "R-CRW-01",
+      "domain": "crowd",
+      "name": "High Congestion",
+      "trigger": "zone_density_above_threshold",
+      "threshold": 0.85,
+      "severity": "high",
+      "signalType": "high_congestion"
+    },
+    {
+      "id": "R-CRW-02",
+      "domain": "crowd",
+      "name": "Ingress Surge",
+      "trigger": "ingress_rate_spike",
+      "multiplier": 2.0,
+      "severity": "high",
+      "signalType": "ingress_surge"
+    },
+    {
+      "id": "R-NAV-01",
+      "domain": "navigation",
+      "name": "Reroute Needed",
+      "trigger": "gate_closed_adjacent_density_high",
+      "threshold": 0.75,
+      "severity": "medium",
+      "signalType": "reroute_needed"
+    },
+    {
+      "id": "R-MED-01",
+      "domain": "medical",
+      "name": "Medical Dispatch",
+      "trigger": "incident_severity_above",
+      "minimumSeverity": "high",
+      "severity": "critical",
+      "signalType": "medical_dispatch"
+    },
+    {
+      "id": "R-SEC-01",
+      "domain": "security",
+      "name": "Escalation Risk",
+      "trigger": "crowd_incident_co_located",
+      "zoneRadiusMeters": 100,
+      "severity": "high",
+      "signalType": "escalation_risk"
+    },
+    {
+      "id": "R-TRN-01",
+      "domain": "transport",
+      "name": "Egress Risk",
+      "trigger": "shuttle_delay_near_egress",
+      "delayThresholdMinutes": 10,
+      "severity": "medium",
+      "signalType": "egress_risk"
+    },
+    {
+      "id": "R-ACC-01",
+      "domain": "accessibility",
+      "name": "Priority Access",
+      "trigger": "accessible_route_congested_or_queue",
+      "queueThreshold": 5,
+      "densityThreshold": 0.7,
+      "severity": "high",
+      "signalType": "priority_access"
+    },
+    {
+      "id": "R-SUS-01",
+      "domain": "sustainability",
+      "name": "Load Shed",
+      "trigger": "energy_load_above",
+      "threshold": 0.9,
+      "severity": "medium",
+      "signalType": "load_shed"
+    },
+    {
+      "id": "R-MUL-01",
+      "domain": "multilingual",
+      "name": "Localize Broadcast",
+      "trigger": "fan_alert_multi_language",
+      "severity": "low",
+      "signalType": "localize_broadcast"
+    }
+  ]
+}

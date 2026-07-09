@@ -1,0 +1,39 @@
+{
+  "$schema": "AEGIS Venue Model — Zone topology, capacities, and adjacencies for MetLife Stadium.",
+  "venue": {
+    "name": "MetLife Stadium",
+    "city": "East Rutherford, NJ",
+    "capacity": 82500
+  },
+  "zones": [
+    { "id": "gate-1", "type": "gate", "capacity": 3000, "adjacent": ["concourse-north", "parking-a"], "accessible": true },
+    { "id": "gate-3", "type": "gate", "capacity": 3500, "adjacent": ["concourse-north", "parking-b"], "accessible": false },
+    { "id": "gate-5", "type": "gate", "capacity": 3000, "adjacent": ["concourse-east", "transport-hub-east"], "accessible": true },
+    { "id": "gate-7", "type": "gate", "capacity": 4000, "adjacent": ["concourse-east", "transport-hub-east"], "accessible": false },
+    { "id": "gate-9", "type": "gate", "capacity": 3500, "adjacent": ["concourse-south", "parking-c"], "accessible": true },
+    { "id": "gate-12", "type": "gate", "capacity": 3000, "adjacent": ["concourse-west", "transport-hub-west"], "accessible": true },
+    { "id": "concourse-north", "type": "concourse", "capacity": 12000, "adjacent": ["gate-1", "gate-3", "section-100", "section-114"], "accessible": true },
+    { "id": "concourse-east", "type": "concourse", "capacity": 10000, "adjacent": ["gate-5", "gate-7", "section-120", "section-130"], "accessible": true },
+    { "id": "concourse-south", "type": "concourse", "capacity": 12000, "adjacent": ["gate-9", "section-140", "section-200"], "accessible": true },
+    { "id": "concourse-west", "type": "concourse", "capacity": 10000, "adjacent": ["gate-12", "section-210", "section-220"], "accessible": true },
+    { "id": "section-100", "type": "seating", "capacity": 5000, "adjacent": ["concourse-north"], "accessible": true },
+    { "id": "section-114", "type": "seating", "capacity": 4500, "adjacent": ["concourse-north"], "accessible": true },
+    { "id": "section-120", "type": "seating", "capacity": 5000, "adjacent": ["concourse-east"], "accessible": false },
+    { "id": "section-130", "type": "seating", "capacity": 4000, "adjacent": ["concourse-east"], "accessible": true },
+    { "id": "section-140", "type": "seating", "capacity": 5000, "adjacent": ["concourse-south"], "accessible": true },
+    { "id": "section-200", "type": "seating", "capacity": 6000, "adjacent": ["concourse-south"], "accessible": false },
+    { "id": "section-210", "type": "seating", "capacity": 4500, "adjacent": ["concourse-west"], "accessible": true },
+    { "id": "section-220", "type": "seating", "capacity": 5000, "adjacent": ["concourse-west"], "accessible": false },
+    { "id": "transport-hub-east", "type": "transport", "capacity": 2000, "adjacent": ["gate-5", "gate-7", "parking-b"], "accessible": true },
+    { "id": "transport-hub-west", "type": "transport", "capacity": 2000, "adjacent": ["gate-12", "parking-c"], "accessible": true },
+    { "id": "parking-a", "type": "parking", "capacity": 5000, "adjacent": ["gate-1"], "accessible": true },
+    { "id": "parking-b", "type": "parking", "capacity": 6000, "adjacent": ["gate-3", "transport-hub-east"], "accessible": false },
+    { "id": "parking-c", "type": "parking", "capacity": 5000, "adjacent": ["gate-9", "transport-hub-west"], "accessible": true },
+    { "id": "medical-station-1", "type": "medical", "capacity": 50, "adjacent": ["concourse-north"], "accessible": true },
+    { "id": "medical-station-2", "type": "medical", "capacity": 50, "adjacent": ["concourse-south"], "accessible": true },
+    { "id": "energy-plant", "type": "utility", "capacity": 100, "adjacent": [], "accessible": false },
+    { "id": "waste-station-1", "type": "utility", "capacity": 100, "adjacent": ["parking-a"], "accessible": false },
+    { "id": "accessible-entrance-1", "type": "accessible", "capacity": 500, "adjacent": ["gate-1", "concourse-north"], "accessible": true },
+    { "id": "accessible-entrance-2", "type": "accessible", "capacity": 500, "adjacent": ["gate-9", "concourse-south"], "accessible": true }
+  ]
+}

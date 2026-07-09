@@ -1,0 +1,11 @@
+node_modules
+dist
+.turbo
+out
+.env
+aegis.db
+aegis.db-journal
+.DS_Store
+Thumbs.db
+apps/api/aegis.db
+apps/api/aegis.db-journal

@@ -1,0 +1,26 @@
+{
+  "$schema": "AEGIS Scoring Configuration — All weights and formulas configurable here.",
+  "severityScores": {
+    "low": 0.4,
+    "medium": 0.6,
+    "high": 0.8,
+    "critical": 0.95
+  },
+  "domainWeights": {
+    "medical": 1.0,
+    "security": 0.95,
+    "crowd": 0.9,
+    "accessibility": 0.9,
+    "transport": 0.8,
+    "navigation": 0.7,
+    "operations": 0.65,
+    "multilingual": 0.6,
+    "sustainability": 0.5
+  },
+  "recencyDecayHalfLifeSeconds": 900,
+  "llmConfidenceClamp": {
+    "min": 0.5,
+    "max": 1.0
+  },
+  "memoryLookbackCount": 10
+}

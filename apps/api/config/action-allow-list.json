@@ -1,0 +1,58 @@
+{
+  "$schema": "AEGIS Action Allow-List — Only these actions may be recommended per domain.",
+  "actions": {
+    "navigation": [
+      "reroute_crowd",
+      "close_gate",
+      "open_alternate_route",
+      "update_signage"
+    ],
+    "crowd": [
+      "reroute_crowd",
+      "deploy_crowd_control",
+      "stagger_entry",
+      "open_overflow_area"
+    ],
+    "transport": [
+      "dispatch_shuttle",
+      "stagger_egress",
+      "update_transport_signage",
+      "pre_position_vehicle"
+    ],
+    "accessibility": [
+      "clear_accessible_route",
+      "deploy_volunteer_assistance",
+      "open_alternate_accessible_exit",
+      "priority_access"
+    ],
+    "sustainability": [
+      "reduce_lighting",
+      "adjust_hvac",
+      "dispatch_waste_management",
+      "activate_renewable_backup"
+    ],
+    "multilingual": [
+      "broadcast_multilingual_alert",
+      "deploy_interpreter",
+      "update_digital_signage_language"
+    ],
+    "operations": [
+      "deploy_volunteer",
+      "escalate_to_organizer",
+      "adjust_schedule",
+      "activate_contingency"
+    ],
+    "medical": [
+      "dispatch_medical_team",
+      "pre_position_medical",
+      "clear_medical_route",
+      "activate_emergency_protocol"
+    ],
+    "security": [
+      "dispatch_security",
+      "zone_lockdown",
+      "perimeter_control",
+      "escalate_to_law_enforcement"
+    ]
+  }
+}

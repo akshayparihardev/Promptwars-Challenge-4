@@ -1,0 +1,31 @@
+{
+  "$schema": "AEGIS Health Score Configuration — Formula weights and normalizers.",
+  "weights": {
+    "criticalIncidentWeight": 0.4,
+    "highIncidentWeight": 0.2,
+    "pendingRecommendationWeight": 0.1
+  },
+  "normalizers": {
+    "navigation": 5,
+    "crowd": 5,
+    "transport": 5,
+    "accessibility": 5,
+    "sustainability": 5,
+    "multilingual": 3,
+    "operations": 5,
+    "medical": 3,
+    "security": 3
+  },
+  "domainWeights": {
+    "navigation": 0.10,
+    "crowd": 0.18,
+    "transport": 0.12,
+    "accessibility": 0.12,
+    "sustainability": 0.08,
+    "multilingual": 0.05,
+    "operations": 0.10,
+    "medical": 0.15,
+    "security": 0.10
+  },
+  "trendWindowSnapshots": 5
+}

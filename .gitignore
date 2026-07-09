@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+
+# Database
+*.db
+*.db-journal
+
+# Build output
+dist/
+.turbo/
+
+# Environment (keep .env.example committed)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Coverage
+coverage/
+
+# Test snapshots (if any)
+__snapshots__/
+
+# Package lock (keep it committed for reproducibility)
+# package-lock.json
