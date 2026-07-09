@@ -3,7 +3,7 @@
 // with animated rings, trend indicators, and domain breakdown.
 // ============================================================
 
-import { TrendingUp, TrendingDown, Minus, Heart } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { HealthScore } from '@aegis/shared';
 
 const DOMAIN_CONFIG: Record<string, { label: string; color: string; icon: string }> = {
@@ -98,24 +98,6 @@ interface Props {
 }
 
 export function HealthScoreDashboard({ healthScore }: Props) {
-  const TrendIcon = healthScore.trend === 'improving'
-    ? TrendingUp
-    : healthScore.trend === 'declining'
-      ? TrendingDown
-      : Minus;
-
-  const trendColor = healthScore.trend === 'improving'
-    ? 'text-emerald-500'
-    : healthScore.trend === 'declining'
-      ? 'text-red-500'
-      : 'text-slate-400';
-
-  const trendLabel = healthScore.trend === 'improving'
-    ? 'Improving'
-    : healthScore.trend === 'declining'
-      ? 'Declining'
-      : 'Stable';
-
   return (
     <div className="glass-card p-6 mb-6 animate-fade-in" role="status" aria-label="Operational Health Score">
       <div className="flex flex-col md:flex-row items-start md:items-center gap-8">

@@ -96,9 +96,9 @@ async function main(): Promise<void> {
     timeWindow: '1 minute',
   });
 
-  // ── Static Frontend (for Docker deployment) ─────────────────
+  // ── Static Frontend (for single-server / Docker deployment) ──
   const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const distPath = path.join(__dirname, '../../../web/dist');
+  const distPath = path.join(__dirname, '../../web/dist');
   
   await app.register(fastifyStatic, {
     root: distPath,
