@@ -41,10 +41,9 @@ COPY --from=installer /app/apps/api/config ./apps/api/config
 COPY --from=installer /app/apps/api/prisma ./apps/api/prisma
 COPY --from=installer /app/apps/web/dist ./apps/web/dist
 COPY --from=installer /app/packages/shared/package.json ./packages/shared/package.json
-COPY --from=installer /app/packages/shared/dist ./packages/shared/dist
 
 # Expose port
 EXPOSE 3000
 
 # Start command: seed DB on start, then run the API server
-CMD ["sh", "-c", "npx prisma db push --schema=apps/api/prisma/schema.prisma --accept-data-loss && node apps/api/dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push --schema=apps/api/prisma/schema.prisma --accept-data-loss && node apps/api/dist/apps/api/src/main.js"]
