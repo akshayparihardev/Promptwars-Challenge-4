@@ -75,7 +75,7 @@ export function makeDecision(
 // ── Reasoning Cycle ───────────────────────────────────────────
 
 export function triggerCycle(): Promise<CycleResponse> {
-  return fetchJson('/reasoning/cycle', { method: 'POST' });
+  return fetchJson('/reasoning/cycle', { method: 'POST', body: '{}' });
 }
 
 // ── Health Score ──────────────────────────────────────────────

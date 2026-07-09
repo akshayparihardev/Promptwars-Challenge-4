@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: aegis-fifa-wc-2026
+    env: docker
+    plan: free
+    region: ohio
+    branch: main
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: AEGIS_LLM_PROVIDER
+        value: deterministic
+      - key: PORT
+        value: 3000

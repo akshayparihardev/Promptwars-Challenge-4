@@ -15,7 +15,7 @@ export function computeConfidence(
   memoryAccuracy: number | undefined,
   config: ScoringConfig
 ): number {
-  const severityScore = config.severityScores[severity] ?? 0.5;
+  const severityScore = (config.severityScores[severity] ?? 50) / 100;
   const base = severityScore * (1 - 1 / (1 + evidenceCount));
 
   const llmAdj = llmReportedConfidence

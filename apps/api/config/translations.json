@@ -1,0 +1,49 @@
+{
+  "es": {
+    "Gate": "Puerta",
+    "crowd": "multitud",
+    "security": "seguridad",
+    "medical": "médico",
+    "Please use": "Por favor use",
+    "emergency": "emergencia",
+    "avoid": "evitar",
+    "area": "área"
+  },
+  "fr": {
+    "Gate": "Porte",
+    "crowd": "foule",
+    "security": "sécurité",
+    "medical": "médical",
+    "Please use": "Veuillez utiliser",
+    "emergency": "urgence",
+    "avoid": "éviter",
+    "area": "zone"
+  },
+  "pt": {
+    "Gate": "Portão",
+    "crowd": "multidão",
+    "security": "segurança",
+    "medical": "médico",
+    "Please use": "Por favor use",
+    "emergency": "emergência",
+    "avoid": "evitar",
+    "area": "área"
+  },
+  "ar": {
+    "Gate": "بوابة",
+    "crowd": "حشد",
+    "security": "أمن",
+    "medical": "طبي",
+    "emergency": "طوارئ"
+  },
+  "de": {
+    "Gate": "Tor",
+    "crowd": "Menschenmenge",
+    "security": "Sicherheit",
+    "medical": "medizinisch",
+    "Please use": "Bitte benutzen Sie",
+    "emergency": "Notfall",
+    "avoid": "vermeiden",
+    "area": "Bereich"
+  }
+}

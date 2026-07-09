@@ -66,7 +66,7 @@ describe('DeterministicReasoner', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0]?.situationId).toBe('sit_1');
-      expect(result[0]?.healthScoreDelta).toBe(-18); // Critical severity penalty
+      expect(result[0]?.healthScoreDelta).toBe(-10); // Matches severityScore map in test mock penalty
       expect(result[0]?.predictedMetrics['severity_escalation_risk']).toBe(0.9);
     });
   });

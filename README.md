@@ -1,111 +1,88 @@
-# AEGIS 🛡️ — Adaptive Event-Ground Intelligence System
+# AEGIS 🛡️
 
-**A GenAI-Powered Operational Intelligence Platform for FIFA World Cup 2026.**
+**Adaptive Event-Ground Intelligence System for FIFA World Cup 2026**
 
-AEGIS is an advanced stadium management platform that correlates real-time crowd, transport, and facility signals into actionable recommendations. It ensures safe, efficient, and accessible operations by grounding its decisions in **deterministic rules** before utilizing Large Language Models (LLMs) to predict impacts and generate alternative strategies.
+AEGIS is a GenAI-enabled operational intelligence platform that enhances stadium operations, crowd management, security, and accessibility. It provides real-time decision support for venue staff, organizers, and volunteers by detecting incidents across domains, predicting cascading impacts, and recommending actionable interventions.
 
-Modelled venue: **MetLife Stadium** (FIFA name *New York New Jersey Stadium*), host of the 2026 Final. 
+Modelled venue: **MetLife Stadium** (New York New Jersey Stadium), host of the 2026 Final. 
 
 ---
 
-## 1. Chosen Vertical & Persona
+## 1. Chosen vertical & persona
 
-- **Persona:** Organizer / Venue Operations / Security / Medical
-- **Vertical:** Operational Intelligence & Incident Management
-- **Product:** *AEGIS* — A real-time reasoning engine that ingests signals across 9 domains (Crowd, Security, Medical, Transport, etc.), detects situations, and routes AI-generated mitigation strategies to the correct operational teams for immediate approval and simulated execution.
+- **Personas:** Venue Operations, Security, Medical, Organizer, Fan, Volunteer
+- **Vertical:** Operational Intelligence + Real-Time Decision Support
+- **Product:** *AEGIS Assistant & Dashboard* — An interactive command center that ingests high-velocity stadium events, runs reasoning cycles to correlate data, and provides context-aware guidance via a conversational chat assistant and live recommendation feed.
 
-## 2. Approach & Logic — *Clean Architecture & Determinism First*
+## 2. Approach & logic — *rules before LLM*
 
-The core design principle is **Clean Architecture** combined with **Deterministic Guardrails**:
+The core design principle is **deterministic filtering first, language model second**:
 
 ```
-Live Stadium State ─▶ Rules Engine (Deterministic) ─▶ LLM (Impact & Alternatives) ─▶ Operational Decision
-                   • Detects anomalies              • Predicts systemic impact     • Routed to correct role
-                   • Correlates events              • Generates fallback options   • Awaits Human-in-the-Loop
-                   • Prioritizes severity           • Localizes recommendations    • Executes simulated effect
+Live Events ─▶ Rules Engine (deterministic) ─▶ High-Severity Signals ─▶ GenAI (Correlate & Predict) ─▶ Actionable Recommendations
+              • severity thresholds           • zone correlation
+              • domain filtering              • cascading impact
 ```
 
-1. **Deterministic Foundations:** The rules engine (`rules-engine.ts`) acts as a gatekeeper. It correlates incoming operational events into `Situations` using configurable JSON thresholds (e.g., density > 80%, incident severity). 
-2. **LLM Augmentation:** Only *after* a situation is deterministically validated does the LLM Reasoner (`gemini-reasoner.ts`) step in. It is strictly constrained to predict cascading impacts (e.g., "how will a gate closure affect transport?") and generate viable alternative actions.
-3. **No Hardcoding:** Absolutely every threshold, weight, domain definition, and rule is injected via configuration (`apps/api/config/*.json`).
-4. **Offline Fallback:** If no Gemini API key is provided, the system seamlessly falls back to a purely deterministic rule-based generator (`deterministic-reasoner.ts`). The platform **never crashes** due to API limits.
+1. **The rules engine (`rules-engine.ts`) acts as a filter** — It continuously monitors the event stream and extracts high-severity incidents, preventing LLM noise and reducing cost.
+2. **The LLM (Gemini 1.5 Flash)** analyzes the filtered signals, correlates multi-domain incidents (e.g., crowd surge leading to medical emergency), predicts health score impact if ignored, and generates tailored alternatives based on allowed actions.
+3. If no LLM key is provided, the app **short-circuits** to a robust deterministic fallback reasoner, ensuring 100% uptime.
 
-## 3. How It Works — Setup & Run
+## 3. How it works — setup & run
 
 **Requirements:** Node.js 20+
 
 ```bash
-# 1. Install dependencies across the Turborepo workspace
 npm install
-
-# 2. Push the Prisma schema and seed the local SQLite database
-npm run db:push
-npm run db:seed
-
-# 3. Start the Backend API & Frontend UI concurrently
-npm run dev
+npm run build
+npm start
 ```
 
-Open `<http://localhost:5173>` to access the AEGIS Command Center.
+Open <http://localhost:3000>.
 
-### Environment Configuration
-
-Copy `.env.example` to `.env` in the project root:
+**Environment config** (create `.env`):
 
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `AEGIS_LLM_PROVIDER` | `gemini` or `deterministic` | `deterministic` |
-| `AEGIS_GEMINI_API_KEY` | Gemini API key (Required if provider=gemini) | *(unset)* |
-| `PORT` | API Port | `3000` |
-| `DATABASE_URL` | Local SQLite path | `file:./aegis.db` |
-| `AEGIS_CYCLE_MS` | Reasoning cycle frequency | `15000` |
+| `AEGIS_GEMINI_API_KEY` | Enables GenAI reasoning. **Absent → deterministic.** | *(unset)* |
+| `NODE_ENV` | Environment | `development` |
 
-> 🔐 **Fully Offline Capable:** The app runs without an API key if `AEGIS_LLM_PROVIDER=deterministic`.
+> 🔐 The app runs **fully offline without any key**: if `AEGIS_LLM_PROVIDER=deterministic`, it transparently falls back to a rules-based reasoner, so it never crashes.
 
-## 4. Quality Attributes
+**Using the UI:** Use the **Role Dropdown** (top right) to switch between Organizer, Security, Fan, etc. Click **Simulate Incident** to inject a high-severity event into the system. The **AEGIS Assistant** chat panel allows you to interact conversationally with the system for immediate answers.
 
-### 🌍 Green Software Practices
-- **Zero-Ops Database:** Relies on a highly optimized, local SQLite database (`aegis.db` < 10MB) to minimize disk I/O and carbon footprint.
-- **Server-Sent Events (SSE):** The frontend consumes real-time updates via SSE, eliminating wasteful CPU cycles and network overhead caused by long-polling.
-- **Compute Efficiency:** The deterministic fallback engine ensures zero cloud-compute waste during development or low-severity operations.
+## 4. Quality attributes
 
-### 🛡️ Security & Integrity
-- **No Hardcoded Secrets:** Configuration and API keys are strictly managed via environment variables.
-- **Strict Data Validation:** Every API boundary and internal Domain event is heavily validated using `Zod` schemas (`@aegis/shared/schemas`).
-- **Human-in-the-Loop:** Actions are never executed autonomously. The AI proposes, the human operator `Approves` or `Rejects` via the `/decisions` endpoint.
+### ⚡ Code Quality & Architecture
+- **Clean Architecture:** Strict separation of Domain (Ports, Entities), Application (Use Cases), and Infrastructure (Adapters).
+- **No Hardcoding:** Role mappings, translations, severity scores, and detection rules are all externally configured in `apps/api/config/*.json`.
+- **TypeScript Strict Mode:** 100% type safety across the monorepo (`@aegis/shared` for Zod schemas).
 
-### 💻 100% Code Quality
-- **Strict TypeScript:** The entire Turborepo workspace executes `npm run typecheck --workspaces` with **zero compiler errors**.
-- **Clean Architecture:** Dependencies strictly point inward. The `domain` has zero knowledge of the `infrastructure` (Prisma, Gemini).
+### ♿ Accessibility — WCAG 2.1 AA
+- **Semantic HTML & ARIA:** Single `<h1>`, `<main>` landmark, `skip-to-content` link (`<a href="#main" class="sr-only">`), and `aria-live="polite"` on chat and feeds.
+- **Visual Design:** High-contrast color palette with WCAG compliant text contrast ratios.
+- **Reduced Motion:** Fully respects `prefers-reduced-motion` media queries, disabling animations for users with vestibular disorders.
+- **Focus States:** Every interactive element has highly visible `:focus-visible` outlines for keyboard navigation.
 
-### ✨ Premium UI/UX
-- **Glassmorphism & Gradients:** Built with React, Vite, and TailwindCSS. Features animated ambient mesh gradients, beautiful glassmorphic cards, and crisp `Inter` typography.
-- **Theme Toggle:** Flawless Light/Dark mode transitions (supporting OLED-style Slate-950).
-- **Responsive & Accessible:** Scales beautifully from mobile to 1600px ultra-wide command center displays.
+### 🔐 Security
+- **Strict Input Validation (Zod):** Every API endpoint validates payloads. Oversized strings and invalid domains are rejected (400 Bad Request).
+- **No Secrets in Code:** The API key is read exclusively from `.env`.
+- **Authorization:** Only authorized roles can approve/reject recommendations (e.g. `fan` cannot approve `security` actions).
 
-## 5. Architecture
+### 🧪 Testing
+The backend business logic is extensively tested using **Vitest**.
 
-```text
-aegis/
-├── apps/
-│   ├── api/                   # Fastify + Prisma + Clean Architecture Backend
-│   │   ├── config/            # JSON Rules, Thresholds, Allow-lists
-│   │   ├── prisma/            # SQLite Schema
-│   │   └── src/
-│   │       ├── application/   # Use Cases (RunReasoningCycle, IngestEvent)
-│   │       ├── domain/        # Entities, Ports, Scoring, Rules Engine
-│   │       ├── infrastructure/# Prisma Repos, Gemini/Deterministic Reasoners
-│   │       └── interface/     # Fastify HTTP Routes & SSE Streams
-│   └── web/                   # React + Vite + Tailwind Frontend
-│       └── src/
-│           ├── api/           # Typed Fetch Client
-│           ├── components/    # HealthScoreDashboard, RecommendationCards
-│           └── App.tsx        # Command Center Layout & Theme State
-├── packages/
-│   └── shared/                # 100% Shared Zod Schemas & Domain Constants
-├── .env                       # Root environment configuration
-└── package.json               # Turborepo orchestration
+```bash
+npm run test --workspace=apps/api
 ```
 
+- `test/rules-engine.test.ts`: Asserts deterministic filtering behavior.
+- `test/scoring.test.ts`: Verifies math for confidence bounds, priority, and health scores.
+- `test/use-cases.test.ts`: Asserts business workflows (RunCycle, Ingest, Approve).
+- `test/routes.test.ts`: API endpoint integration tests.
+- `test/security.test.ts`: Input validation and error handling.
+
 ## License
-MIT
+
+MIT License.

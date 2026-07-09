@@ -265,6 +265,23 @@ export const CycleResponseSchema = z.object({
 
 export type CycleResponse = z.infer<typeof CycleResponseSchema>;
 
+export const ChatRequestSchema = z.object({
+  message: z.string().max(500),
+  role: RoleSchema,
+  language: LanguageCodeSchema.default('en'),
+  accessibilityNeeds: z.array(z.string()).optional(),
+  currentLocation: z.string().optional(),
+});
+
+export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+
+export const ChatResponseSchema = z.object({
+  answer: z.string(),
+  source: z.enum(['genai', 'rules']),
+});
+
+export type ChatResponse = z.infer<typeof ChatResponseSchema>;
+
 export const DecisionResponseSchema = z.object({
   recommendationId: z.string(),
   status: RecStatusSchema,

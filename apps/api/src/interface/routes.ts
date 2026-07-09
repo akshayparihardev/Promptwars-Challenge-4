@@ -3,15 +3,16 @@
 // ============================================================
 
 import type { FastifyInstance } from 'fastify';
-import { OperationalEventCreateSchema, DecisionCreateSchema, ListRecommendationsQuerySchema, ListAuditQuerySchema, ListMemoryQuerySchema } from '@aegis/shared';
+import { OperationalEventCreateSchema, DecisionCreateSchema, ListRecommendationsQuerySchema, ListAuditQuerySchema, ListMemoryQuerySchema, ChatRequestSchema } from '@aegis/shared';
 import type { UseCaseDeps } from '../application/use-cases.js';
-import { IngestEventUseCase, RunReasoningCycleUseCase, ApproveDecisionUseCase, RejectDecisionUseCase, AppError } from '../application/use-cases.js';
+import { IngestEventUseCase, RunReasoningCycleUseCase, ApproveDecisionUseCase, RejectDecisionUseCase, ChatUseCase, AppError } from '../application/use-cases.js';
 
 export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
   const ingestEvent = new IngestEventUseCase(deps);
   const runCycle = new RunReasoningCycleUseCase(deps);
   const approveDecision = new ApproveDecisionUseCase(deps);
   const rejectDecision = new RejectDecisionUseCase(deps);
+  const chatUseCase = new ChatUseCase(deps);
 
   // ── POST /api/v1/events ─────────────────────────────────────
   app.post('/api/v1/events', async (req, reply) => {
@@ -121,6 +122,25 @@ export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
         });
       }
       throw err;
+    }
+  });
+
+  // ── POST /api/v1/chat ───────────────────────────────────────
+  app.post('/api/v1/chat', async (req, reply) => {
+    const parsed = ChatRequestSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: { code: 'VALIDATION_ERROR', message: 'Invalid chat request', details: parsed.error.issues },
+      });
+    }
+
+    try {
+      const result = await chatUseCase.execute(parsed.data);
+      return reply.send(result);
+    } catch (err: any) {
+      return reply.status(500).send({
+        error: { code: 'INTERNAL_ERROR', message: err.message },
+      });
     }
   });
 

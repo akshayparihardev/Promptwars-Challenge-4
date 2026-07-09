@@ -15,17 +15,9 @@ import type { Role, Domain } from '@aegis/shared';
 import { getRecommendations, getHealthScore, triggerCycle, createSSEConnection, ingestEvent } from './api/client.js';
 import { HealthScoreDashboard } from './components/HealthScoreDashboard.js';
 import { RecommendationCard } from './components/RecommendationCard.js';
-
-const ROLE_LABELS: Record<string, string> = {
-  fan: '🎫 Fan',
-  volunteer: '🙋 Volunteer',
-  security: '🛡️ Security',
-  medical: '🏥 Medical',
-  organizer: '📋 Organizer',
-  venue_operations: '🏟️ Venue Ops',
-  accessibility_coordinator: '♿ Accessibility',
-  transportation_coordinator: '🚌 Transport',
-};
+import { AssistantChat } from './components/AssistantChat.js';
+import { FanDashboard } from './components/FanDashboard.js';
+import { t } from './i18n/index.js';
 
 const DOMAIN_LABELS: Record<string, string> = {
   navigation: 'Navigation',
@@ -48,9 +40,11 @@ export default function App() {
     }
     return true;
   });
-  const [activeRole, setActiveRole] = useState<Role>('organizer');
+  const [activeRole, setActiveRole] = useState<Role>('fan');
   const [domainFilter, setDomainFilter] = useState<Domain | 'all'>('all');
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
+  const [language, setLanguage] = useState('en');
+  const [accessibilityNeeds, setAccessibilityNeeds] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   // Theme toggle
@@ -58,6 +52,11 @@ export default function App() {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('aegis-theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
+
+  // Update lang attribute for accessibility (WCAG 3.1.1)
+  useEffect(() => {
+    document.documentElement.setAttribute('lang', language);
+  }, [language]);
 
   // SSE connection
   useEffect(() => {
@@ -117,6 +116,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-aegis-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-500">
+      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:z-[100] focus:p-4 focus:bg-white focus:text-aegis-600 focus:font-bold">Skip to main content</a>
       {/* ── Top Navigation Bar ─────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-slate-200/50 dark:border-slate-700/50 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -149,6 +149,17 @@ export default function App() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
+              {/* Language Selector */}
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="bg-transparent border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1.5 text-sm font-medium focus:ring-aegis-500"
+              >
+                <option value="en">EN</option>
+                <option value="es">ES</option>
+                <option value="fr">FR</option>
+              </select>
+
               {/* Simulate Incident Button */}
               <button
                 onClick={handleSimulateIncident}
@@ -178,7 +189,7 @@ export default function App() {
                   id="role-switcher"
                 >
                   <Users className="w-4 h-4 text-aegis-500" />
-                  <span className="text-sm font-medium">{ROLE_LABELS[activeRole]}</span>
+                  <span className="text-sm font-medium">{t(`role_${activeRole}`, language)}</span>
                   <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                 </button>
 
@@ -194,7 +205,7 @@ export default function App() {
                             : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                         }`}
                       >
-                        {ROLE_LABELS[role]}
+                        {t(`role_${role}`, language)}
                       </button>
                     ))}
                   </div>
@@ -220,9 +231,20 @@ export default function App() {
       </header>
 
       {/* ── Main Content ───────────────────────────────────────── */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Health Score Dashboard */}
-        {healthScore && <HealthScoreDashboard healthScore={healthScore} />}
+      {activeRole === 'fan' ? (
+        <main id="main">
+          <FanDashboard 
+            language={language}
+            activeRole={activeRole}
+            accessibilityNeeds={accessibilityNeeds}
+            setAccessibilityNeeds={setAccessibilityNeeds}
+          />
+        </main>
+      ) : (
+      <main id="main" className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6 items-start">
+        <div className="flex-1 min-w-0 w-full space-y-6">
+          {/* Health Score Dashboard */}
+          {healthScore && <HealthScoreDashboard healthScore={healthScore} />}
 
         {/* Domain Filter Bar */}
         <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2 custom-scrollbar">
@@ -289,7 +311,18 @@ export default function App() {
             />
           ))}
         </div>
+        </div>
+
+        {/* ── Chat Assistant Panel ─────────────────────────────────── */}
+        <div className="w-full lg:w-[400px] xl:w-[450px] shrink-0 sticky top-[88px]">
+          <AssistantChat 
+            activeRole={activeRole} 
+            recommendations={recommendations} 
+            language={language}
+          />
+        </div>
       </main>
+      )}
 
       {/* ── Footer ─────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200/50 dark:border-slate-800 mt-12 py-6">

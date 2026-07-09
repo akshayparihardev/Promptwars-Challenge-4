@@ -46,4 +46,4 @@ COPY --from=installer /app/packages/shared/dist ./packages/shared/dist
 EXPOSE 3000
 
 # Start command: seed DB on start, then run the API server
-CMD ["sh", "-c", "npx prisma db push --schema=apps/api/prisma/schema.prisma && npx tsx apps/api/prisma/seed.ts && node apps/api/dist/main.js"]
+CMD ["sh", "-c", "npx prisma db push --schema=apps/api/prisma/schema.prisma --accept-data-loss && node apps/api/dist/main.js"]

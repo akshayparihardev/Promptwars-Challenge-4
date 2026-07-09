@@ -1,0 +1,14 @@
+{
+  "roles": {
+    "navigation": ["venue_operations", "fan"],
+    "crowd": ["security", "venue_operations"],
+    "transport": ["transportation_coordinator"],
+    "accessibility": ["accessibility_coordinator", "volunteer"],
+    "sustainability": ["venue_operations"],
+    "multilingual": ["volunteer", "fan"],
+    "operations": ["venue_operations", "organizer"],
+    "medical": ["medical"],
+    "security": ["security"]
+  },
+  "defaultRole": "organizer"
+}

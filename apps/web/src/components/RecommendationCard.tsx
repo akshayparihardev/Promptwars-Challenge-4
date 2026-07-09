@@ -96,7 +96,7 @@ export function RecommendationCard({ recommendation: rec, activeRole }: Props) {
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-semibold text-slate-500">Priority</span>
               <span className="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-sm font-bold text-slate-700 dark:text-slate-200">
-                {(rec.priority * 100).toFixed(0)}
+                {rec.priority.toFixed(0)}
               </span>
             </div>
           </div>

@@ -27,6 +27,7 @@ import {
   computeSituationSignature,
 } from '../domain/scoring/scoring-service.js';
 import type { AppConfig } from '../infrastructure/config/config-loader.js';
+import { DOMAINS } from '@aegis/shared';
 import type { Domain, Severity, RecStatus } from '@aegis/shared';
 
 // ── Shared Dependencies ──────────────────────────────────────
@@ -318,19 +319,10 @@ export class RunReasoningCycleUseCase {
   }
 
   private getTargetRoles(domain: string, severity: string): string[] {
-    const roleMapping: Record<string, string[]> = {
-      navigation: ['venue_operations', 'fan'],
-      crowd: ['security', 'venue_operations'],
-      transport: ['transportation_coordinator'],
-      accessibility: ['accessibility_coordinator', 'volunteer'],
-      sustainability: ['venue_operations'],
-      multilingual: ['volunteer', 'fan'],
-      operations: ['venue_operations', 'organizer'],
-      medical: ['medical'],
-      security: ['security'],
-    };
+    const roleMapping = this.deps.config.roleMapping.roles;
+    const defaultRole = this.deps.config.roleMapping.defaultRole;
 
-    const roles = [...(roleMapping[domain] ?? ['organizer'])];
+    const roles = [...(roleMapping[domain] ?? [defaultRole])];
 
     // Critical severity always includes organizer
     if (severity === 'critical' && !roles.includes('organizer')) {
@@ -352,7 +344,7 @@ export class RunReasoningCycleUseCase {
     }
     // Default healthy state
     const domains = {} as Record<string, number>;
-    for (const d of ['navigation', 'crowd', 'transport', 'accessibility', 'sustainability', 'multilingual', 'operations', 'medical', 'security']) {
+    for (const d of DOMAINS) {
       domains[d] = 100;
     }
     return { domains: domains as Record<Domain, number>, overall: 100, trend: 'stable', computedAt: new Date().toISOString() };
@@ -363,9 +355,8 @@ export class RunReasoningCycleUseCase {
     const counts = await this.deps.eventRepo.countBySeverityAndDomain(windowMin);
 
     const domainScores: Record<string, number> = {};
-    const allDomains = ['navigation', 'crowd', 'transport', 'accessibility', 'sustainability', 'multilingual', 'operations', 'medical', 'security'];
-
-    for (const domain of allDomains) {
+    
+    for (const domain of DOMAINS) {
       const criticalCount = counts
         .filter((c) => c.domain === domain && c.severity === 'critical')
         .reduce((sum, c) => sum + c.count, 0);
@@ -593,6 +584,35 @@ export class RejectDecisionUseCase {
       recommendationId: input.recommendationId,
       status: 'rejected',
       decisionId: decision.id,
+    };
+  }
+}
+
+// ════════════════════════════════════════════════════════════════
+// ChatUseCase
+// ════════════════════════════════════════════════════════════════
+
+import type { ChatRequest, ChatResponse } from '@aegis/shared';
+import { ChatAgent } from '../infrastructure/llm/chat-agent.js';
+
+export class ChatUseCase {
+  private chatAgent: ChatAgent;
+
+  constructor(deps: UseCaseDeps) {
+    this.chatAgent = new ChatAgent(deps.config, deps.eventRepo, deps.healthSnapshotRepo);
+  }
+
+  async execute(request: ChatRequest): Promise<ChatResponse> {
+    const answer = await this.chatAgent.processChat(request);
+    
+    // For now we assume if it starts with (Mock Response) it's rules based, otherwise GenAI
+    const source = (answer.includes('(Mock Response)') || answer.includes('aseos') || answer.includes('toilettes') || answer.includes('restroom')) 
+      ? 'rules' 
+      : 'genai';
+
+    return {
+      answer,
+      source
     };
   }
 }

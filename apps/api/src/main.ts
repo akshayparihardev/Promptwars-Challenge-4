@@ -27,6 +27,7 @@ import { InProcessEventBus } from './infrastructure/event-bus.js';
 import { registerRoutes } from './interface/routes.js';
 import { RunReasoningCycleUseCase } from './application/use-cases.js';
 import type { UseCaseDeps } from './application/use-cases.js';
+import { seedDatabase } from './seed.js';
 
 async function main(): Promise<void> {
   console.log('\n🛡️  AEGIS — Adaptive Event-Ground Intelligence System');
@@ -118,6 +119,15 @@ async function main(): Promise<void> {
   // ── Register Routes ─────────────────────────────────────────
   registerRoutes(app, deps);
   console.log('✅ Routes registered');
+
+  // ── Seed Demo Data ──────────────────────────────────────────
+  const seeded = await seedDatabase(eventRepo, prisma);
+  if (seeded > 0) {
+    // Run initial reasoning cycle to generate recommendations from seed data
+    const initialCycle = new RunReasoningCycleUseCase(deps);
+    const result = await initialCycle.execute();
+    console.log(`🧠 Initial cycle: ${result.generated} recommendations generated`);
+  }
 
   // ── Reasoning Scheduler ─────────────────────────────────────
   const reasoningCycle = new RunReasoningCycleUseCase(deps);

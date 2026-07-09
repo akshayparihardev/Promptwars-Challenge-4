@@ -21,6 +21,20 @@ if (existsSync(envPath)) {
 
 // ── Config Schemas ────────────────────────────────────────────
 
+export const EnvSchema = z.object({
+  PORT: z.coerce.number().default(3001),
+  HOST: z.string().default('0.0.0.0'),
+  DATABASE_URL: z.string().default('file:./aegis.db'),
+  LLM_PROVIDER: z.enum(['gemini', 'deterministic']).default('gemini'),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().default('gemini-1.5-flash'),
+  CYCLE_INTERVAL_MS: z.coerce.number().default(10000),
+  AEGIS_CONTEXT_WINDOW_MIN: z.coerce.number().default(30),
+  AEGIS_REC_TTL_MIN: z.coerce.number().default(30),
+  LOG_LEVEL: z.string().default('info'),
+  FRONTEND_URL: z.string().default('http://localhost:5173'),
+});
+
 const DetectionRuleSchema = z.object({
   id: z.string(),
   domain: z.string(),
@@ -64,6 +78,13 @@ const ActionAllowListConfigSchema = z.object({
   actions: z.record(z.string(), z.array(z.string())),
 });
 
+const RoleMappingConfigSchema = z.object({
+  roles: z.record(z.string(), z.array(z.string())),
+  defaultRole: z.string(),
+});
+
+const TranslationsConfigSchema = z.record(z.string(), z.record(z.string(), z.string()));
+
 const ZoneSchema = z.object({
   id: z.string(),
   type: z.string(),
@@ -88,6 +109,8 @@ export type DetectionRulesConfig = z.infer<typeof DetectionRulesConfigSchema>;
 export type ScoringConfig = z.infer<typeof ScoringConfigSchema>;
 export type HealthScoreConfig = z.infer<typeof HealthScoreConfigSchema>;
 export type ActionAllowListConfig = z.infer<typeof ActionAllowListConfigSchema>;
+export type RoleMappingConfig = z.infer<typeof RoleMappingConfigSchema>;
+export type TranslationsConfig = z.infer<typeof TranslationsConfigSchema>;
 export type VenueZone = z.infer<typeof ZoneSchema>;
 export type VenueModelConfig = z.infer<typeof VenueModelConfigSchema>;
 
@@ -143,6 +166,8 @@ export interface AppConfig {
   scoring: ScoringConfig;
   healthScore: HealthScoreConfig;
   actionAllowList: ActionAllowListConfig;
+  roleMapping: RoleMappingConfig;
+  translations: TranslationsConfig;
   venueModel: VenueModelConfig;
   prompts: {
     correlate: string;
@@ -156,6 +181,7 @@ export interface AppConfig {
     databaseUrl: string;
     llmProvider: 'gemini' | 'deterministic';
     geminiApiKey: string;
+    geminiModel: string;
     cycleMs: number;
     contextWindowMin: number;
     recTtlMin: number;
@@ -170,6 +196,8 @@ export function loadConfig(): AppConfig {
   const scoring = loadJson('scoring.json', ScoringConfigSchema);
   const healthScore = loadJson('health-score.json', HealthScoreConfigSchema);
   const actionAllowList = loadJson('action-allow-list.json', ActionAllowListConfigSchema);
+  const roleMapping = loadJson('role-mapping.json', RoleMappingConfigSchema);
+  const translations = loadJson('translations.json', TranslationsConfigSchema);
   const venueModel = loadJson('venue-model.json', VenueModelConfigSchema);
 
   // ── Load prompt templates ──
@@ -181,30 +209,28 @@ export function loadConfig(): AppConfig {
   };
 
   // ── Load and validate env vars ──
-  const llmProvider = (process.env['AEGIS_LLM_PROVIDER'] ?? 'deterministic') as
-    | 'gemini'
-    | 'deterministic';
-  const geminiApiKey = process.env['AEGIS_GEMINI_API_KEY'] ?? '';
+  const envParsed = EnvSchema.parse(process.env);
 
-  if (llmProvider === 'gemini' && !geminiApiKey) {
+  if (envParsed.LLM_PROVIDER === 'gemini' && !envParsed.GEMINI_API_KEY) {
     throw new Error(
-      '[CONFIG] AEGIS_LLM_PROVIDER is "gemini" but AEGIS_GEMINI_API_KEY is not set. ' +
-        'Either provide the key or set AEGIS_LLM_PROVIDER=deterministic.'
+      '[CONFIG] LLM_PROVIDER is "gemini" but GEMINI_API_KEY is not set. ' +
+        'Either provide the key or set LLM_PROVIDER=deterministic.'
     );
   }
 
   const env = {
-    port: parseInt(process.env['PORT'] ?? '3000', 10),
-    host: process.env['HOST'] ?? '0.0.0.0',
-    databaseUrl: process.env['DATABASE_URL'] ?? 'file:./aegis.db',
-    llmProvider,
-    geminiApiKey,
-    cycleMs: parseInt(process.env['AEGIS_CYCLE_MS'] ?? '15000', 10),
-    contextWindowMin: parseInt(process.env['AEGIS_CONTEXT_WINDOW_MIN'] ?? '30', 10),
-    recTtlMin: parseInt(process.env['AEGIS_REC_TTL_MIN'] ?? '30', 10),
-    logLevel: process.env['LOG_LEVEL'] ?? 'info',
-    frontendUrl: process.env['FRONTEND_URL'] ?? 'http://localhost:5173',
+    port: envParsed.PORT,
+    host: envParsed.HOST,
+    databaseUrl: envParsed.DATABASE_URL,
+    llmProvider: envParsed.LLM_PROVIDER,
+    geminiApiKey: envParsed.GEMINI_API_KEY ?? '',
+    geminiModel: envParsed.GEMINI_MODEL,
+    cycleMs: envParsed.CYCLE_INTERVAL_MS,
+    contextWindowMin: envParsed.AEGIS_CONTEXT_WINDOW_MIN,
+    recTtlMin: envParsed.AEGIS_REC_TTL_MIN,
+    logLevel: envParsed.LOG_LEVEL,
+    frontendUrl: envParsed.FRONTEND_URL,
   };
 
-  return { detectionRules, scoring, healthScore, actionAllowList, venueModel, prompts, env };
+  return { detectionRules, scoring, healthScore, actionAllowList, roleMapping, translations, venueModel, prompts, env };
 }

@@ -4,13 +4,25 @@
 
 @layer base {
   :root {
-    --gradient-primary: linear-gradient(135deg, #338dff 0%, #6366f1 100%);
-    --gradient-accent: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
-    --gradient-success: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+    /* FIFA World Cup 2026 Brand Colors */
+    --gradient-primary: linear-gradient(135deg, #113458 0%, #00b14f 100%);
+    --gradient-accent: linear-gradient(135deg, #d81e36 0%, #f9a01b 100%);
+    --gradient-success: linear-gradient(135deg, #00b14f 0%, #113458 100%);
+    
+    --tw-colors-domain-navigation: #6366f1;
+    --tw-colors-domain-crowd: #f59e0b;
+    --tw-colors-domain-transport: #3b82f6;
+    --tw-colors-domain-accessibility: #8b5cf6;
+    --tw-colors-domain-sustainability: #10b981;
+    --tw-colors-domain-multilingual: #ec4899;
+    --tw-colors-domain-operations: #6b7280;
+    --tw-colors-domain-medical: #ef4444;
+    --tw-colors-domain-security: #f97316;
+
     --glass-bg: rgba(255, 255, 255, 0.6);
     --glass-border: rgba(255, 255, 255, 0.4);
     --shadow-soft: 0 8px 32px rgba(0, 0, 0, 0.04);
-    --shadow-glow: 0 0 32px rgba(51, 141, 255, 0.2);
+    --shadow-glow: 0 0 32px rgba(17, 52, 88, 0.2);
   }
 
   .dark {
@@ -36,6 +48,44 @@
       radial-gradient(at 0% 0%, hsla(217, 100%, 40%, 0.12) 0px, transparent 50%),
       radial-gradient(at 100% 100%, hsla(260, 100%, 40%, 0.12) 0px, transparent 50%);
     background-attachment: fixed;
+  }
+
+  /* High-visibility mode */
+  .hi-vis {
+    background-color: #000 !important;
+    background-image: none !important;
+    color: #ff0 !important;
+  }
+  
+  .hi-vis .glass-card {
+    background: #000 !important;
+    border: 2px solid #ff0 !important;
+    box-shadow: none !important;
+    color: #ff0 !important;
+  }
+
+  .hi-vis * {
+    color: #ff0 !important;
+    border-color: #ff0 !important;
+  }
+  
+  .hi-vis svg {
+    color: #ff0 !important;
+  }
+
+  /* Accessibility focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-slate-900 rounded-sm;
+  }
+
+  /* Accessibility reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
