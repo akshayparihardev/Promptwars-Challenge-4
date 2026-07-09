@@ -42,6 +42,7 @@ COPY --from=installer /app/apps/api/config ./apps/api/config
 COPY --from=installer /app/apps/api/prisma ./apps/api/prisma
 COPY --from=installer /app/apps/web/dist ./apps/web/dist
 COPY --from=installer /app/packages/shared/package.json ./packages/shared/package.json
+COPY --from=installer /app/packages/shared/dist ./packages/shared/dist
 
 # Expose port
 EXPOSE 3000
