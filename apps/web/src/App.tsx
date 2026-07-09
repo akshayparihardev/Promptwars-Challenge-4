@@ -8,11 +8,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Shield, Sun, Moon, Activity, Users, Radio,
-  ChevronDown, RefreshCw, Zap
+  ChevronDown, RefreshCw, Zap, AlertTriangle
 } from 'lucide-react';
 import { ROLES, DOMAINS } from '@aegis/shared';
 import type { Role, Domain } from '@aegis/shared';
-import { getRecommendations, getHealthScore, triggerCycle, createSSEConnection } from './api/client.js';
+import { getRecommendations, getHealthScore, triggerCycle, createSSEConnection, ingestEvent } from './api/client.js';
 import { HealthScoreDashboard } from './components/HealthScoreDashboard.js';
 import { RecommendationCard } from './components/RecommendationCard.js';
 
@@ -93,6 +93,28 @@ export default function App() {
     queryClient.invalidateQueries({ queryKey: ['healthScore'] });
   }, [queryClient]);
 
+  const handleSimulateIncident = useCallback(async () => {
+    // Generate a high severity mock incident to force a recommendation
+    const domains = ['crowd', 'security', 'medical', 'transport'];
+    const randomDomain = domains[Math.floor(Math.random() * domains.length)] as Domain;
+    
+    await ingestEvent({
+      domain: randomDomain,
+      type: 'incident',
+      severity: 'high',
+      zone: 'gate-a',
+      payload: { 
+        simulated: true, 
+        timestamp: new Date().toISOString(),
+        summary: `Simulated high severity ${randomDomain} incident detected at Gate A.`,
+        source: 'simulator'
+      }
+    });
+    
+    // Immediately trigger the cycle so the user sees the result
+    await handleTriggerCycle();
+  }, [handleTriggerCycle]);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-aegis-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 transition-colors duration-500">
       {/* ── Top Navigation Bar ─────────────────────────────────── */}
@@ -127,6 +149,16 @@ export default function App() {
 
             {/* Right Controls */}
             <div className="flex items-center gap-3">
+              {/* Simulate Incident Button */}
+              <button
+                onClick={handleSimulateIncident}
+                className="btn-danger flex items-center gap-2 text-sm ml-2"
+                aria-label="Simulate a high-severity incident"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                <span className="hidden sm:inline">Simulate Incident</span>
+              </button>
+
               {/* Trigger Cycle Button */}
               <button
                 onClick={handleTriggerCycle}
