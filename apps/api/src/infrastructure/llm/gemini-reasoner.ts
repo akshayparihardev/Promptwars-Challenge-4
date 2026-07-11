@@ -15,7 +15,7 @@ export class GeminiReasoner implements LlmReasoner {
 
   constructor(private readonly config: AppConfig) {
     const genAI = new GoogleGenerativeAI(config.env.geminiApiKey);
-    this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    this.model = genAI.getGenerativeModel({ model: config.env.geminiModel || 'gemini-1.5-flash' });
   }
 
   async correlate(input: {

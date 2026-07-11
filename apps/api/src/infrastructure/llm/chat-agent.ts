@@ -272,7 +272,7 @@ export class ChatAgent {
     private readonly healthRepo: HealthSnapshotRepository
   ) {
     this.ai = new GoogleGenAI({ apiKey: config.env.geminiApiKey || 'mock_key' });
-    this.model = config.env.geminiModel || 'gemini-2.5-flash';
+    this.model = config.env.geminiModel || 'gemini-1.5-flash';
   }
 
   async processChat(request: ChatRequest): Promise<string> {
