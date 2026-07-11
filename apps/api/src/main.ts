@@ -8,7 +8,6 @@ import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { loadConfig } from './infrastructure/config/config-loader.js';
 import { getPrisma, disconnectPrisma } from './infrastructure/db/prisma-client.js';
 import {
@@ -22,7 +21,6 @@ import {
   PrismaHealthSnapshotRepository,
 } from './infrastructure/db/repositories.js';
 import { DeterministicReasoner } from './infrastructure/llm/deterministic-reasoner.js';
-import { GeminiReasoner } from './infrastructure/llm/gemini-reasoner.js';
 import { InProcessEventBus } from './infrastructure/event-bus.js';
 import { registerRoutes } from './interface/routes.js';
 import { RunReasoningCycleUseCase } from './application/use-cases.js';
@@ -52,11 +50,9 @@ async function main(): Promise<void> {
   const healthSnapshotRepo = new PrismaHealthSnapshotRepository(prisma);
 
   // ── LLM Reasoner ────────────────────────────────────────────
-  const llmReasoner =
-    config.env.llmProvider === 'gemini'
-      ? new GeminiReasoner(config)
-      : new DeterministicReasoner(config);
-  console.log(`✅ LLM Reasoner: ${config.env.llmProvider}`);
+  // Always use deterministic for background reasoning to save API quota!
+  const llmReasoner = new DeterministicReasoner(config);
+  console.log(`✅ LLM Reasoner: background loop forced to deterministic`);
 
   // ── Event Bus ───────────────────────────────────────────────
   const eventBus = new InProcessEventBus();

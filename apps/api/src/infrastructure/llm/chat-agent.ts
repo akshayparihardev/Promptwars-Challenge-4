@@ -275,8 +275,8 @@ export class ChatAgent {
     this.model = config.env.geminiModel || 'gemini-1.5-flash';
   }
 
-  async processChat(request: ChatRequest): Promise<string> {
-    if (this.config.env.llmProvider === 'deterministic' || !this.config.env.geminiApiKey) {
+  async processChat(request: ChatRequest, forceDeterministic = false): Promise<string> {
+    if (forceDeterministic || this.config.env.llmProvider === 'deterministic' || !this.config.env.geminiApiKey) {
       return this.smartResponse(request);
     }
 

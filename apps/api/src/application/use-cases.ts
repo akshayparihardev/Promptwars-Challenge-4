@@ -602,8 +602,8 @@ export class ChatUseCase {
     this.chatAgent = new ChatAgent(deps.config, deps.eventRepo, deps.healthSnapshotRepo);
   }
 
-  async execute(request: ChatRequest): Promise<ChatResponse> {
-    const answer = await this.chatAgent.processChat(request);
+  async execute(request: ChatRequest, forceDeterministic = false): Promise<ChatResponse> {
+    const answer = await this.chatAgent.processChat(request, forceDeterministic);
     
     // For now we assume if it starts with (Mock Response) it's rules based, otherwise GenAI
     const source = (answer.includes('(Mock Response)') || answer.includes('aseos') || answer.includes('toilettes') || answer.includes('restroom')) 

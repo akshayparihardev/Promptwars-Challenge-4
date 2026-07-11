@@ -7,6 +7,8 @@ import { OperationalEventCreateSchema, DecisionCreateSchema, ListRecommendations
 import type { UseCaseDeps } from '../application/use-cases.js';
 import { IngestEventUseCase, RunReasoningCycleUseCase, ApproveDecisionUseCase, RejectDecisionUseCase, ChatUseCase, AppError } from '../application/use-cases.js';
 
+// Track Gemini usage per IP to prevent quota exhaustion
+const ipGeminiUsage = new Map<string, number>();
 export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
   const ingestEvent = new IngestEventUseCase(deps);
   const runCycle = new RunReasoningCycleUseCase(deps);
@@ -178,7 +180,15 @@ export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
     }
 
     try {
-      const result = await chatUseCase.execute(parsed.data);
+      // Allow 3 Gemini requests per IP, then force deterministic
+      const currentUsage = ipGeminiUsage.get(clientIp) || 0;
+      const forceDeterministic = currentUsage >= 3;
+      
+      if (!forceDeterministic) {
+        ipGeminiUsage.set(clientIp, currentUsage + 1);
+      }
+
+      const result = await chatUseCase.execute(parsed.data, forceDeterministic);
       return reply.send(result);
     } catch (err: any) {
       return reply.status(500).send({
