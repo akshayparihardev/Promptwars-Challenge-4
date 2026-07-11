@@ -10,12 +10,22 @@ import { z } from 'zod';
 import { config as loadDotenv } from 'dotenv';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CONFIG_DIR = resolve(__dirname, '../../../config');
 
-// Load .env from project root (2 levels up from apps/api/)
-const PROJECT_ROOT = resolve(__dirname, '../../../../..');
-const envPath = resolve(PROJECT_ROOT, '.env');
-if (existsSync(envPath)) {
+// Resolve config directory dynamically based on environment
+const possibleConfigPaths = [
+  resolve(process.cwd(), 'apps/api/config'), // Docker prod
+  resolve(process.cwd(), 'config'), // Local dev (turbo)
+  resolve(__dirname, '../../../config'), // Fallback
+];
+const CONFIG_DIR = (possibleConfigPaths.find(p => existsSync(p)) || possibleConfigPaths[2]) as string;
+
+// Load .env from project root
+const possibleEnvPaths = [
+  resolve(process.cwd(), '.env'),
+  resolve(__dirname, '../../../../..', '.env'),
+];
+const envPath = possibleEnvPaths.find(p => existsSync(p));
+if (envPath) {
   loadDotenv({ path: envPath });
 }
 
