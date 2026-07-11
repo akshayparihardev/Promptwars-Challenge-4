@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Shield, Sun, Moon, Activity, Users, Radio,
-  ChevronDown, RefreshCw, Zap, AlertTriangle
+  ChevronDown, RefreshCw, Zap, AlertTriangle, Eye
 } from 'lucide-react';
 import { ROLES, DOMAINS } from '@aegis/shared';
 import type { Role, Domain } from '@aegis/shared';
@@ -45,6 +45,7 @@ export default function App() {
   const [roleDropdownOpen, setRoleDropdownOpen] = useState(false);
   const [language, setLanguage] = useState('en');
   const [accessibilityNeeds, setAccessibilityNeeds] = useState<string[]>([]);
+  const [hiVis, setHiVis] = useState(false);
   const queryClient = useQueryClient();
 
   // Theme toggle
@@ -57,6 +58,14 @@ export default function App() {
   useEffect(() => {
     document.documentElement.setAttribute('lang', language);
   }, [language]);
+
+  // High-visibility mode toggle (WCAG 1.4.8)
+  useEffect(() => {
+    document.documentElement.classList.toggle('hi-vis', hiVis);
+    if (hiVis && !accessibilityNeeds.includes('visual')) {
+      setAccessibilityNeeds(prev => [...prev, 'visual']);
+    }
+  }, [hiVis]);
 
   // SSE connection
   useEffect(() => {
@@ -211,6 +220,17 @@ export default function App() {
                   </div>
                 )}
               </div>
+
+              {/* High-Contrast Toggle (WCAG) */}
+              <button
+                onClick={() => setHiVis(!hiVis)}
+                className={`p-2.5 rounded-xl transition-all duration-200 hover:scale-105 ${hiVis ? 'bg-yellow-400 text-black' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700'}`}
+                aria-pressed={hiVis}
+                aria-label="High-visibility mode"
+                id="contrast-toggle"
+              >
+                <Eye className="w-4.5 h-4.5" />
+              </button>
 
               {/* Theme Toggle */}
               <button

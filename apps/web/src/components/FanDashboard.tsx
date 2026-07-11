@@ -291,6 +291,19 @@ export function FanDashboard({ language, activeRole, accessibilityNeeds, setAcce
         </div>
 
       </div>
+
+      {/* Grounding & Trust Footer */}
+      <footer className="mt-8 text-center text-xs text-slate-400 dark:text-slate-500 px-4 pb-6">
+        <p className="flex items-center justify-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+          {language === 'es' 
+            ? 'Las respuestas se basan en datos verificados del estadio — el asistente nunca inventa instalaciones.'
+            : language === 'fr'
+            ? 'Les réponses s\'appuient sur des données vérifiées — l\'assistant n\'invente aucune installation.'
+            : 'Answers are grounded in verified stadium data — the assistant never invents facilities.'}
+        </p>
+        <p className="mt-1 opacity-60">MetLife Stadium · East Rutherford, NJ · FIFA World Cup 2026™</p>
+      </footer>
     </div>
   );
 }

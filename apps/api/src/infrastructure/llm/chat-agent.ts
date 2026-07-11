@@ -13,35 +13,231 @@ interface StadiumFacility {
   name: Record<string, string>;
   location: string;
   section: string;
+  zone: string;          // zone ID for graph routing
   accessible: boolean;
   details: Record<string, string>;
 }
 
+// ── Zone Graph for Step-by-Step Navigation ────────────────────
+// Nodes = stadium zones. Edges = walking paths with distance,
+// means (walk/ramp/elevator/stairs), and step-free flag.
+// This enables real pathfinding like TOP 1's Dijkstra approach.
+
+interface GraphEdge {
+  to: string;
+  distance: number;      // meters
+  means: 'walk' | 'ramp' | 'elevator' | 'stairs' | 'escalator';
+  stepFree: boolean;
+  landmark?: Record<string, string>;
+}
+
+const STADIUM_ZONES: Record<string, Record<string, string>> = {
+  'gate-a':       { en: 'Gate A (East)', es: 'Puerta A (Este)', fr: 'Porte A (Est)' },
+  'gate-b':       { en: 'Gate B (South)', es: 'Puerta B (Sur)', fr: 'Porte B (Sud)' },
+  'gate-c':       { en: 'Gate C (West)', es: 'Puerta C (Oeste)', fr: 'Porte C (Ouest)' },
+  'gate-d':       { en: 'Gate D (North)', es: 'Puerta D (Norte)', fr: 'Porte D (Nord)' },
+  'concourse-100-east':  { en: '100-Level East Concourse', es: 'Pasillo 100 Este', fr: 'Coursive 100 Est' },
+  'concourse-100-south': { en: '100-Level South Concourse', es: 'Pasillo 100 Sur', fr: 'Coursive 100 Sud' },
+  'concourse-100-west':  { en: '100-Level West Concourse', es: 'Pasillo 100 Oeste', fr: 'Coursive 100 Ouest' },
+  'concourse-100-north': { en: '100-Level North Concourse', es: 'Pasillo 100 Norte', fr: 'Coursive 100 Nord' },
+  'section-102':  { en: 'Section 102 Area', es: 'Zona Sección 102', fr: 'Zone Section 102' },
+  'section-108':  { en: 'Section 108 Area', es: 'Zona Sección 108', fr: 'Zone Section 108' },
+  'section-112':  { en: 'Section 112 Area', es: 'Zona Sección 112', fr: 'Zone Section 112' },
+  'section-120':  { en: 'Section 120 Area (Food Court)', es: 'Zona Sección 120 (Patio de Comidas)', fr: 'Zone Section 120 (Restauration)' },
+  'concourse-200': { en: '200-Level Concourse', es: 'Pasillo 200', fr: 'Coursive 200' },
+  'section-226':  { en: 'Section 226 Area', es: 'Zona Sección 226', fr: 'Zone Section 226' },
+  'section-234':  { en: 'Section 234 Area', es: 'Zona Sección 234', fr: 'Zone Section 234' },
+  'suite-level':  { en: 'Suite Level', es: 'Nivel Suite', fr: 'Niveau Suite' },
+  'lot-a':        { en: 'Parking Lot A', es: 'Estacionamiento A', fr: 'Parking A' },
+  'lot-g':        { en: 'Lot G (Rideshare)', es: 'Lote G (Transporte)', fr: 'Lot G (Covoiturage)' },
+  'rail-station':  { en: 'Meadowlands Rail Station', es: 'Estación Meadowlands', fr: 'Gare Meadowlands' },
+};
+
+// Build adjacency list from edge definitions
+type AdjList = Map<string, Array<GraphEdge & { from: string }>>;
+
+function buildAdjacencyList(): AdjList {
+  const adj: AdjList = new Map();
+
+  const ensure = (z: string) => { if (!adj.has(z)) adj.set(z, []); };
+
+  // Gate → concourse (fixed mapping)
+  const gateMap: Array<[string, string]> = [
+    ['gate-a', 'concourse-100-east'],
+    ['gate-b', 'concourse-100-south'],
+    ['gate-c', 'concourse-100-west'],
+    ['gate-d', 'concourse-100-north'],
+  ];
+  for (const [gate, concourse] of gateMap) {
+    ensure(gate); ensure(concourse);
+    adj.get(gate)!.push({ from: gate, to: concourse, distance: 30, means: 'ramp', stepFree: true,
+      landmark: { en: 'through security checkpoint', es: 'a través del control de seguridad', fr: 'à travers le contrôle de sécurité' } });
+    adj.get(concourse)!.push({ from: concourse, to: gate, distance: 30, means: 'walk', stepFree: true });
+  }
+
+  // Concourse ring (100-level)
+  const ring100 = ['concourse-100-east', 'concourse-100-south', 'concourse-100-west', 'concourse-100-north'];
+  for (let i = 0; i < ring100.length; i++) {
+    const a = ring100[i]!;
+    const b = ring100[(i + 1) % ring100.length]!;
+    ensure(a); ensure(b);
+    adj.get(a)!.push({ from: a, to: b, distance: 120, means: 'walk', stepFree: true });
+    adj.get(b)!.push({ from: b, to: a, distance: 120, means: 'walk', stepFree: true });
+  }
+
+  // Sections off east concourse
+  const eastSections: Array<[string, number, Record<string, string>?]> = [
+    ['section-102', 40, { en: 'past the team store on your left', es: 'pasando la tienda del equipo', fr: 'après la boutique d\'équipe' }],
+    ['section-108', 50, { en: 'follow the blue medical signs', es: 'siga las señales médicas azules', fr: 'suivez les panneaux médicaux bleus' }],
+    ['section-112', 60],
+  ];
+  for (const [sec, dist, lm] of eastSections) {
+    ensure(sec);
+    adj.get('concourse-100-east')!.push({ from: 'concourse-100-east', to: sec, distance: dist, means: 'walk', stepFree: true, landmark: lm });
+    adj.get(sec)!.push({ from: sec, to: 'concourse-100-east', distance: dist, means: 'walk', stepFree: true });
+  }
+
+  // Section 120 off south concourse
+  ensure('section-120');
+  adj.get('concourse-100-south')!.push({ from: 'concourse-100-south', to: 'section-120', distance: 80, means: 'walk', stepFree: true,
+    landmark: { en: 'follow the aroma to the International Food Court', es: 'siga el aroma al Patio de Comidas', fr: 'suivez les arômes vers la restauration' } });
+  adj.get('section-120')!.push({ from: 'section-120', to: 'concourse-100-south', distance: 80, means: 'walk', stepFree: true });
+
+  // 100-level to 200-level vertical connections
+  ensure('concourse-200');
+  adj.get('concourse-100-east')!.push({ from: 'concourse-100-east', to: 'concourse-200', distance: 15, means: 'elevator', stepFree: true,
+    landmark: { en: 'take the elevator near Section 108', es: 'tome el ascensor cerca de Sección 108', fr: 'prenez l\'ascenseur près de Section 108' } });
+  adj.get('concourse-100-east')!.push({ from: 'concourse-100-east', to: 'concourse-200', distance: 10, means: 'stairs', stepFree: false });
+  adj.get('concourse-200')!.push({ from: 'concourse-200', to: 'concourse-100-east', distance: 15, means: 'elevator', stepFree: true });
+  adj.get('concourse-200')!.push({ from: 'concourse-200', to: 'concourse-100-east', distance: 10, means: 'stairs', stepFree: false });
+
+  // 200-level sections
+  for (const [sec, dist, lm] of [['section-226', 60], ['section-234', 80, { en: 'near the upper water fountain', es: 'cerca de la fuente superior', fr: 'près de la fontaine supérieure' }]] as Array<[string, number, Record<string, string>?]>) {
+    ensure(sec);
+    adj.get('concourse-200')!.push({ from: 'concourse-200', to: sec, distance: dist, means: 'walk', stepFree: true, landmark: lm });
+    adj.get(sec)!.push({ from: sec, to: 'concourse-200', distance: dist, means: 'walk', stepFree: true });
+  }
+
+  // Suite level
+  ensure('suite-level');
+  adj.get('concourse-200')!.push({ from: 'concourse-200', to: 'suite-level', distance: 20, means: 'elevator', stepFree: true,
+    landmark: { en: 'exclusive elevator — suite ticket required', es: 'ascensor exclusivo — boleto suite', fr: 'ascenseur exclusif — billet suite' } });
+  adj.get('suite-level')!.push({ from: 'suite-level', to: 'concourse-200', distance: 20, means: 'elevator', stepFree: true });
+
+  // External zones (from Gate A)
+  ensure('lot-a'); ensure('lot-g'); ensure('rail-station');
+  adj.get('gate-a')!.push({ from: 'gate-a', to: 'lot-a', distance: 200, means: 'walk', stepFree: true,
+    landmark: { en: 'follow shuttle signs to Lot A', es: 'siga las señales al Lote A', fr: 'suivez les panneaux vers Parking A' } });
+  adj.get('lot-a')!.push({ from: 'lot-a', to: 'gate-a', distance: 200, means: 'walk', stepFree: true });
+  adj.get('gate-a')!.push({ from: 'gate-a', to: 'lot-g', distance: 250, means: 'walk', stepFree: true });
+  adj.get('lot-g')!.push({ from: 'lot-g', to: 'gate-a', distance: 250, means: 'walk', stepFree: true });
+  adj.get('gate-b')!.push({ from: 'gate-b', to: 'rail-station', distance: 300, means: 'walk', stepFree: true,
+    landmark: { en: 'follow the covered walkway to Meadowlands Station', es: 'siga el pasillo cubierto a Meadowlands', fr: 'suivez la passerelle couverte vers la gare' } });
+  adj.get('rail-station')!.push({ from: 'rail-station', to: 'gate-b', distance: 300, means: 'walk', stepFree: true });
+
+  return adj;
+}
+
+const ADJACENCY = buildAdjacencyList();
+
+// ── BFS / Dijkstra Pathfinding ────────────────────────────────
+interface RouteStep {
+  from: string;
+  to: string;
+  distance: number;
+  means: string;
+  stepFree: boolean;
+  landmark?: Record<string, string>;
+}
+
+function findRoute(from: string, to: string, stepFreeOnly: boolean): RouteStep[] | null {
+  if (from === to) return [];
+  if (!ADJACENCY.has(from) || !ADJACENCY.has(to)) return null;
+
+  // Dijkstra's algorithm
+  const dist = new Map<string, number>();
+  const prev = new Map<string, { node: string; edge: GraphEdge & { from: string } } | null>();
+  const visited = new Set<string>();
+
+  dist.set(from, 0);
+  prev.set(from, null);
+
+  while (true) {
+    // Find unvisited node with smallest distance
+    let current: string | null = null;
+    let currentDist = Infinity;
+    for (const [node, d] of dist) {
+      if (!visited.has(node) && d < currentDist) {
+        current = node;
+        currentDist = d;
+      }
+    }
+    if (current === null) break;
+    if (current === to) break;
+
+    visited.add(current);
+    const edges = ADJACENCY.get(current) ?? [];
+    for (const edge of edges) {
+      if (stepFreeOnly && !edge.stepFree) continue;
+      if (visited.has(edge.to)) continue;
+
+      const newDist = currentDist + edge.distance;
+      const existingDist = dist.get(edge.to) ?? Infinity;
+      if (newDist < existingDist) {
+        dist.set(edge.to, newDist);
+        prev.set(edge.to, { node: current, edge });
+      }
+    }
+  }
+
+  if (!prev.has(to)) return null;
+
+  // Reconstruct path
+  const path: RouteStep[] = [];
+  let node: string | null = to;
+  while (node && prev.get(node)) {
+    const entry: { node: string; edge: GraphEdge & { from: string } } = prev.get(node)!;
+    path.unshift({
+      from: entry.edge.from,
+      to: entry.edge.to,
+      distance: entry.edge.distance,
+      means: entry.edge.means,
+      stepFree: entry.edge.stepFree,
+      landmark: entry.edge.landmark,
+    });
+    node = entry.node;
+  }
+
+  return path.length > 0 ? path : null;
+}
+
+// ── Facility Database with zone IDs ──────────────────────────
+
 const STADIUM_FACILITIES: Record<string, StadiumFacility[]> = {
   restroom: [
-    { name: { en: 'Main Restrooms', es: 'Aseos Principales', fr: 'Toilettes Principales' }, location: 'Behind Section 102', section: '100-level', accessible: true, details: { en: 'Family restrooms available. Wheelchair accessible.', es: 'Baños familiares disponibles. Accesible para sillas de ruedas.', fr: 'Toilettes familiales disponibles. Accessible en fauteuil roulant.' } },
-    { name: { en: 'Upper Restrooms', es: 'Aseos Superiores', fr: 'Toilettes Supérieures' }, location: 'Near Section 226', section: '200-level', accessible: true, details: { en: 'Less crowded during halftime.', es: 'Menos concurridos en el medio tiempo.', fr: 'Moins fréquentées à la mi-temps.' } },
-    { name: { en: 'Suite Level Restrooms', es: 'Aseos Nivel Suite', fr: 'Toilettes Niveau Suite' }, location: 'Suite Level Concourse', section: '300-level', accessible: true, details: { en: 'Suite ticket holders only.', es: 'Solo para poseedores de boletos suite.', fr: 'Réservé aux détenteurs de billets suite.' } },
+    { name: { en: 'Main Restrooms', es: 'Aseos Principales', fr: 'Toilettes Principales' }, location: 'Behind Section 102', section: '100-level', zone: 'section-102', accessible: true, details: { en: 'Family restrooms available. Wheelchair accessible.', es: 'Baños familiares disponibles. Accesible para sillas de ruedas.', fr: 'Toilettes familiales disponibles. Accessible en fauteuil roulant.' } },
+    { name: { en: 'Upper Restrooms', es: 'Aseos Superiores', fr: 'Toilettes Supérieures' }, location: 'Near Section 226', section: '200-level', zone: 'section-226', accessible: true, details: { en: 'Less crowded during halftime.', es: 'Menos concurridos en el medio tiempo.', fr: 'Moins fréquentées à la mi-temps.' } },
+    { name: { en: 'Suite Level Restrooms', es: 'Aseos Nivel Suite', fr: 'Toilettes Niveau Suite' }, location: 'Suite Level Concourse', section: '300-level', zone: 'suite-level', accessible: true, details: { en: 'Suite ticket holders only.', es: 'Solo para poseedores de boletos suite.', fr: 'Réservé aux détenteurs de billets suite.' } },
   ],
   food: [
-    { name: { en: 'Main Concessions', es: 'Concesiones Principales', fr: 'Concessions Principales' }, location: 'Sections 101–110', section: '100-level', accessible: true, details: { en: 'Hot dogs, burgers, nachos, pizza. Halal & vegetarian options available.', es: 'Perritos calientes, hamburguesas, nachos, pizza. Opciones halal y vegetarianas.', fr: 'Hot-dogs, hamburgers, nachos, pizza. Options halal et végétariennes.' } },
-    { name: { en: 'International Food Court', es: 'Patio de Comidas Internacional', fr: 'Aire de Restauration Internationale' }, location: 'Section 120', section: '100-level', accessible: true, details: { en: 'World cuisines: Mexican, Japanese, Mediterranean, Indian. FIFA WC 2026 special menu.', es: 'Cocinas del mundo: mexicana, japonesa, mediterránea, india. Menú especial FIFA WC 2026.', fr: 'Cuisines du monde: mexicaine, japonaise, méditerranéenne, indienne. Menu spécial FIFA WC 2026.' } },
-    { name: { en: 'Grab & Go Kiosks', es: 'Kioscos Rápidos', fr: 'Kiosques À Emporter' }, location: 'Every gate entrance', section: 'All levels', accessible: true, details: { en: 'Snacks, water, soda, beer. Contactless payment only.', es: 'Bocadillos, agua, refrescos, cerveza. Solo pago sin contacto.', fr: 'Collations, eau, soda, bière. Paiement sans contact uniquement.' } },
+    { name: { en: 'Main Concessions', es: 'Concesiones Principales', fr: 'Concessions Principales' }, location: 'Sections 101–110', section: '100-level', zone: 'concourse-100-east', accessible: true, details: { en: 'Hot dogs, burgers, nachos, pizza. Halal & vegetarian options available.', es: 'Perritos calientes, hamburguesas, nachos, pizza. Opciones halal y vegetarianas.', fr: 'Hot-dogs, hamburgers, nachos, pizza. Options halal et végétariennes.' } },
+    { name: { en: 'International Food Court', es: 'Patio de Comidas Internacional', fr: 'Aire de Restauration Internationale' }, location: 'Section 120', section: '100-level', zone: 'section-120', accessible: true, details: { en: 'World cuisines: Mexican, Japanese, Mediterranean, Indian. FIFA WC 2026 special menu.', es: 'Cocinas del mundo: mexicana, japonesa, mediterránea, india. Menú especial FIFA WC 2026.', fr: 'Cuisines du monde: mexicaine, japonaise, méditerranéenne, indienne. Menu spécial FIFA WC 2026.' } },
+    { name: { en: 'Grab & Go Kiosks', es: 'Kioscos Rápidos', fr: 'Kiosques À Emporter' }, location: 'Every gate entrance', section: 'All levels', zone: 'gate-a', accessible: true, details: { en: 'Snacks, water, soda, beer. Contactless payment only.', es: 'Bocadillos, agua, refrescos, cerveza. Solo pago sin contacto.', fr: 'Collations, eau, soda, bière. Paiement sans contact uniquement.' } },
   ],
   medical: [
-    { name: { en: 'Main Medical Station', es: 'Estación Médica Principal', fr: 'Station Médicale Principale' }, location: 'Section 108', section: '100-level', accessible: true, details: { en: 'Full first aid, AED, nurses on duty 24/7 during match days. Call +1-800-555-MEDIC.', es: 'Primeros auxilios completos, DEA, enfermeras 24/7 en días de partido. Llame al +1-800-555-MEDIC.', fr: 'Premiers secours complets, DEA, infirmières 24h/24 les jours de match. Appelez le +1-800-555-MEDIC.' } },
-    { name: { en: 'Upper Level First Aid', es: 'Primeros Auxilios Nivel Superior', fr: 'Premiers Secours Niveau Supérieur' }, location: 'Section 234', section: '200-level', accessible: true, details: { en: 'Basic first aid and cooling station. Ideal for heat-related issues.', es: 'Primeros auxilios básicos y estación de enfriamiento.', fr: 'Premiers secours de base et station de rafraîchissement.' } },
+    { name: { en: 'Main Medical Station', es: 'Estación Médica Principal', fr: 'Station Médicale Principale' }, location: 'Section 108', section: '100-level', zone: 'section-108', accessible: true, details: { en: 'Full first aid, AED, nurses on duty 24/7 during match days. Call +1-800-555-MEDIC.', es: 'Primeros auxilios completos, DEA, enfermeras 24/7 en días de partido. Llame al +1-800-555-MEDIC.', fr: 'Premiers secours complets, DEA, infirmières 24h/24 les jours de match. Appelez le +1-800-555-MEDIC.' } },
+    { name: { en: 'Upper Level First Aid', es: 'Primeros Auxilios Nivel Superior', fr: 'Premiers Secours Niveau Supérieur' }, location: 'Section 234', section: '200-level', zone: 'section-234', accessible: true, details: { en: 'Basic first aid and cooling station. Ideal for heat-related issues.', es: 'Primeros auxilios básicos y estación de enfriamiento.', fr: 'Premiers secours de base et station de rafraîchissement.' } },
   ],
   gate: [
-    { name: { en: 'Gate A (Main Entrance)', es: 'Puerta A (Entrada Principal)', fr: 'Porte A (Entrée Principale)' }, location: 'East side, facing parking lot', section: 'Ground', accessible: true, details: { en: 'Primary entrance. Accessible ramp on left side. Opens 3h before kickoff.', es: 'Entrada principal. Rampa accesible a la izquierda. Abre 3h antes del partido.', fr: 'Entrée principale. Rampe accessible à gauche. Ouvre 3h avant le coup d\'envoi.' } },
-    { name: { en: 'Gate B', es: 'Puerta B', fr: 'Porte B' }, location: 'South side', section: 'Ground', accessible: true, details: { en: 'Closest to NJ Transit rail station. Best for public transit arrivals.', es: 'Más cercana a la estación NJ Transit. Mejor para llegadas en transporte público.', fr: 'La plus proche de la gare NJ Transit. Idéale pour les arrivées en transport en commun.' } },
-    { name: { en: 'Gate C', es: 'Puerta C', fr: 'Porte C' }, location: 'West side', section: 'Ground', accessible: true, details: { en: 'VIP and Suite access. Less crowded pre-game.', es: 'Acceso VIP y Suites. Menos concurrida antes del partido.', fr: 'Accès VIP et Suites. Moins fréquentée avant le match.' } },
-    { name: { en: 'Gate D', es: 'Puerta D', fr: 'Porte D' }, location: 'North side', section: 'Ground', accessible: true, details: { en: 'Family entrance. Stroller parking available. Closest to family seating.', es: 'Entrada familiar. Estacionamiento de cochecitos disponible.', fr: 'Entrée familiale. Stationnement poussettes disponible.' } },
+    { name: { en: 'Gate A (Main Entrance)', es: 'Puerta A (Entrada Principal)', fr: 'Porte A (Entrée Principale)' }, location: 'East side, facing parking lot', section: 'Ground', zone: 'gate-a', accessible: true, details: { en: 'Primary entrance. Accessible ramp on left side. Opens 3h before kickoff.', es: 'Entrada principal. Rampa accesible a la izquierda. Abre 3h antes del partido.', fr: 'Entrée principale. Rampe accessible à gauche. Ouvre 3h avant le coup d\'envoi.' } },
+    { name: { en: 'Gate B', es: 'Puerta B', fr: 'Porte B' }, location: 'South side', section: 'Ground', zone: 'gate-b', accessible: true, details: { en: 'Closest to NJ Transit rail station. Best for public transit arrivals.', es: 'Más cercana a la estación NJ Transit. Mejor para llegadas en transporte público.', fr: 'La plus proche de la gare NJ Transit. Idéale pour les arrivées en transport en commun.' } },
+    { name: { en: 'Gate C', es: 'Puerta C', fr: 'Porte C' }, location: 'West side', section: 'Ground', zone: 'gate-c', accessible: true, details: { en: 'VIP and Suite access. Less crowded pre-game.', es: 'Acceso VIP y Suites. Menos concurrida antes del partido.', fr: 'Accès VIP et Suites. Moins fréquentée avant le match.' } },
+    { name: { en: 'Gate D', es: 'Puerta D', fr: 'Porte D' }, location: 'North side', section: 'Ground', zone: 'gate-d', accessible: true, details: { en: 'Family entrance. Stroller parking available. Closest to family seating.', es: 'Entrada familiar. Estacionamiento de cochecitos disponible.', fr: 'Entrée familiale. Stationnement poussettes disponible.' } },
   ],
   parking: [
-    { name: { en: 'Lot A (General)', es: 'Estacionamiento A (General)', fr: 'Parking A (Général)' }, location: 'East of stadium', section: 'Outdoor', accessible: true, details: { en: 'Main lot — $40. Opens 4h before kickoff. Shuttle available to Gate A.', es: 'Estacionamiento principal — $40. Abre 4h antes. Servicio de transporte a Puerta A.', fr: 'Parking principal — 40$. Ouvre 4h avant. Navette vers Porte A.' } },
-    { name: { en: 'NJ Transit Rail', es: 'Tren NJ Transit', fr: 'Train NJ Transit' }, location: 'Meadowlands Station', section: 'Rail', accessible: true, details: { en: 'Direct trains from NY Penn Station and Secaucus. $5 round trip. Train runs 2h after match.', es: 'Trenes directos desde NY Penn Station y Secaucus. $5 ida y vuelta.', fr: 'Trains directs depuis NY Penn Station et Secaucus. 5$ aller-retour.' } },
-    { name: { en: 'Rideshare Drop-off', es: 'Zona de Descenso', fr: 'Dépose Covoiturage' }, location: 'Lot G', section: 'Outdoor', accessible: true, details: { en: 'Uber/Lyft drop-off & pickup. Follow signs to Lot G after the match.', es: 'Descenso y recogida Uber/Lyft. Siga las señales al Lote G después del partido.', fr: 'Dépose/prise en charge Uber/Lyft. Suivez les panneaux vers le Lot G après le match.' } },
+    { name: { en: 'Lot A (General)', es: 'Estacionamiento A (General)', fr: 'Parking A (Général)' }, location: 'East of stadium', section: 'Outdoor', zone: 'lot-a', accessible: true, details: { en: 'Main lot — $40. Opens 4h before kickoff. Shuttle available to Gate A.', es: 'Estacionamiento principal — $40. Abre 4h antes. Servicio de transporte a Puerta A.', fr: 'Parking principal — 40$. Ouvre 4h avant. Navette vers Porte A.' } },
+    { name: { en: 'NJ Transit Rail', es: 'Tren NJ Transit', fr: 'Train NJ Transit' }, location: 'Meadowlands Station', section: 'Rail', zone: 'rail-station', accessible: true, details: { en: 'Direct trains from NY Penn Station and Secaucus. $5 round trip. Train runs 2h after match.', es: 'Trenes directos desde NY Penn Station y Secaucus. $5 ida y vuelta.', fr: 'Trains directs depuis NY Penn Station et Secaucus. 5$ aller-retour.' } },
+    { name: { en: 'Rideshare Drop-off', es: 'Zona de Descenso', fr: 'Dépose Covoiturage' }, location: 'Lot G', section: 'Outdoor', zone: 'lot-g', accessible: true, details: { en: 'Uber/Lyft drop-off & pickup. Follow signs to Lot G after the match.', es: 'Descenso y recogida Uber/Lyft. Siga las señales al Lote G después del partido.', fr: 'Dépose/prise en charge Uber/Lyft. Suivez les panneaux vers le Lot G après le match.' } },
   ],
 };
 
@@ -147,8 +343,9 @@ Guidelines:
   }
 
   // ── Smart Deterministic Response Engine ─────────────────────
-  // This handles 15+ intents with real, grounded stadium data
-  // so the app is useful even without a Gemini API key.
+  // This handles 15+ intents with real, grounded stadium data,
+  // step-by-step navigation via zone graph pathfinding, and
+  // crowd-aware facility selection.
 
   private async smartResponse(req: ChatRequest): Promise<string> {
     const lang = req.language || 'en';
@@ -178,12 +375,15 @@ Guidelines:
       }
     }
 
+    // Determine user's current zone from the request (default: gate-a)
+    const userZone = this.resolveUserZone(req.currentLocation);
+
     switch (intent) {
-      case 'restroom': return this.facilityResponse('restroom', lang, hasWheelchair, crowdedZones);
-      case 'food': return this.facilityResponse('food', lang, hasWheelchair, crowdedZones);
-      case 'medical': return this.facilityResponse('medical', lang, hasWheelchair, crowdedZones);
-      case 'gate': return this.facilityResponse('gate', lang, hasWheelchair, crowdedZones);
-      case 'parking': return this.facilityResponse('parking', lang, hasWheelchair, crowdedZones);
+      case 'restroom': return this.facilityResponse('restroom', lang, hasWheelchair, crowdedZones, userZone);
+      case 'food': return this.facilityResponse('food', lang, hasWheelchair, crowdedZones, userZone);
+      case 'medical': return this.facilityResponse('medical', lang, hasWheelchair, crowdedZones, userZone);
+      case 'gate': return this.facilityResponse('gate', lang, hasWheelchair, crowdedZones, userZone);
+      case 'parking': return this.facilityResponse('parking', lang, hasWheelchair, crowdedZones, userZone);
       case 'crowd': return this.crowdResponse(lang, crowdedZones, activeIncidents);
       case 'accessibility': return this.accessibilityResponse(lang);
       case 'wifi': return this.wifiResponse(lang);
@@ -192,6 +392,25 @@ Guidelines:
       case 'safety': return this.safetyResponse(lang);
       default: return this.defaultResponse(lang, req.role, health?.overall ?? 100, activeIncidents);
     }
+  }
+
+  private resolveUserZone(location?: string): string {
+    if (!location) return 'gate-a';
+    const loc = location.toLowerCase();
+    // Try to match to a known zone
+    for (const zoneId of Object.keys(STADIUM_ZONES)) {
+      if (loc.includes(zoneId) || zoneId.includes(loc.replace(/\s+/g, '-'))) return zoneId;
+    }
+    // Fuzzy match common descriptions
+    if (loc.includes('gate a') || loc.includes('main entrance')) return 'gate-a';
+    if (loc.includes('gate b') || loc.includes('south')) return 'gate-b';
+    if (loc.includes('gate c') || loc.includes('west') || loc.includes('vip')) return 'gate-c';
+    if (loc.includes('gate d') || loc.includes('north') || loc.includes('family')) return 'gate-d';
+    if (loc.includes('food court') || loc.includes('120')) return 'section-120';
+    if (loc.includes('medical') || loc.includes('108')) return 'section-108';
+    if (loc.includes('102')) return 'section-102';
+    if (loc.includes('200') || loc.includes('upper')) return 'concourse-200';
+    return 'gate-a';
   }
 
   private detectIntent(msg: string): string | null {
@@ -209,7 +428,8 @@ Guidelines:
     return bestMatch;
   }
 
-  private facilityResponse(type: string, lang: string, wheelchair: boolean, crowdedZones: string[]): string {
+  // ── Facility Response with Navigation + Crowd Awareness ────
+  private facilityResponse(type: string, lang: string, wheelchair: boolean, crowdedZones: string[], userZone: string): string {
     const facilities = STADIUM_FACILITIES[type] ?? [];
     if (facilities.length === 0) return this.defaultResponse(lang, 'fan', 100, 0);
 
@@ -221,27 +441,54 @@ Guidelines:
       parking: { en: '🅿️ Parking & Transport', es: '🅿️ Estacionamiento y Transporte', fr: '🅿️ Stationnement et Transport' },
     };
 
+    // ── Crowd-Aware Selection: sort facilities by distance, but prefer uncrowded ones
+    const scored = facilities.map(f => {
+      const route = findRoute(userZone, f.zone, wheelchair);
+      const totalDist = route ? route.reduce((s, r) => s + r.distance, 0) : 9999;
+      const isCrowded = crowdedZones.some(z => z === f.zone || f.location.toLowerCase().includes(z.toLowerCase()));
+      // Crowded facilities get a penalty so quieter alternatives rank higher
+      const effectiveDist = isCrowded ? totalDist + 500 : totalDist;
+      return { facility: f, route, totalDist, isCrowded, effectiveDist };
+    }).sort((a, b) => a.effectiveDist - b.effectiveDist);
+
     const header = headers[type]?.[lang] ?? headers[type]?.['en'] ?? type;
     let response = `**${header}**\n\n`;
 
-    for (const facility of facilities) {
+    // Show the best (uncrowded) recommendation first
+    const best = scored[0]!;
+    if (best.isCrowded && scored.length > 1 && !scored[1]!.isCrowded) {
+      // Swap happened — tell the user
+      const swapNote: Record<string, string> = {
+        en: `⚠️ The nearest ${type} is currently busy. We recommend a less crowded option:`,
+        es: `⚠️ El ${type} más cercano está actualmente concurrido. Recomendamos una opción menos llena:`,
+        fr: `⚠️ Les ${type} les plus proches sont actuellement fréquentés. Nous recommandons une option moins bondée:`,
+      };
+      response += `${swapNote[lang] ?? swapNote['en']}\n\n`;
+    }
+
+    // Render top 2 facilities
+    for (let i = 0; i < Math.min(2, scored.length); i++) {
+      const { facility, route, totalDist, isCrowded } = scored[i]!;
       const name = facility.name[lang] || facility.name['en'];
       const details = facility.details[lang] || facility.details['en'];
-      const isCrowded = crowdedZones.some(z => facility.location.toLowerCase().includes(z.toLowerCase()));
-      
-      response += `📍 **${name}**\n`;
-      response += `   ${facility.location}\n`;
-      response += `   ${details}\n`;
-      
+
+      if (i === 0) {
+        response += `📍 **${name}** ${isCrowded ? '⚠️' : '✅'}\n`;
+      } else {
+        const altLabel: Record<string, string> = { en: 'Alternative', es: 'Alternativa', fr: 'Alternative' };
+        response += `\n📍 **${name}** (${altLabel[lang] ?? 'Alternative'})\n`;
+      }
+      response += `   ${facility.location} • ${details}\n`;
+
       if (wheelchair && facility.accessible) {
         const accessNote: Record<string, string> = {
-          en: '   ♿ Wheelchair accessible',
-          es: '   ♿ Accesible para sillas de ruedas',
-          fr: '   ♿ Accessible en fauteuil roulant',
+          en: '   ♿ Wheelchair accessible • Step-free route available',
+          es: '   ♿ Accesible para sillas de ruedas • Ruta sin escalones',
+          fr: '   ♿ Accessible en fauteuil roulant • Itinéraire sans marches',
         };
         response += `${accessNote[lang] || accessNote['en']}\n`;
       }
-      
+
       if (isCrowded) {
         const crowdNote: Record<string, string> = {
           en: '   ⚠️ Currently busy — expect wait times',
@@ -250,8 +497,35 @@ Guidelines:
         };
         response += `${crowdNote[lang] || crowdNote['en']}\n`;
       }
-      
-      response += '\n';
+
+      // ── Step-by-Step Directions ──
+      if (route && route.length > 0) {
+        const routeLabel: Record<string, string> = { en: 'Route', es: 'Ruta', fr: 'Itinéraire' };
+        response += `\n   **🗺️ ${routeLabel[lang] ?? 'Route'}** (~${totalDist}m, ${Math.ceil(totalDist / 80)} min walk)\n`;
+        
+        for (let s = 0; s < route.length; s++) {
+          const step = route[s]!;
+          const toName = STADIUM_ZONES[step.to]?.[lang] ?? STADIUM_ZONES[step.to]?.['en'] ?? step.to;
+          const meansIcon = step.means === 'elevator' ? '🛗' : step.means === 'ramp' ? '♿' : step.means === 'stairs' ? '🪜' : step.means === 'escalator' ? '🪜' : '🚶';
+          const landmark = step.landmark?.[lang] ?? step.landmark?.['en'] ?? '';
+          const landmarkStr = landmark ? ` — ${landmark}` : '';
+          
+          if (s === route.length - 1) {
+            const arriveLabel: Record<string, string> = { en: 'Arrive at', es: 'Llegue a', fr: 'Arrivez à' };
+            response += `   ${s + 1}. ${meansIcon} **${arriveLabel[lang] ?? 'Arrive at'} ${toName}**${landmarkStr}\n`;
+          } else {
+            const meansLabel: Record<string, Record<string, string>> = {
+              walk: { en: 'Walk to', es: 'Camine a', fr: 'Marchez vers' },
+              ramp: { en: 'Take the ramp to', es: 'Tome la rampa a', fr: 'Prenez la rampe vers' },
+              elevator: { en: 'Take the elevator to', es: 'Tome el ascensor a', fr: 'Prenez l\'ascenseur vers' },
+              stairs: { en: 'Take the stairs to', es: 'Suba las escaleras a', fr: 'Prenez les escaliers vers' },
+              escalator: { en: 'Take the escalator to', es: 'Tome la escalera mecánica a', fr: 'Prenez l\'escalator vers' },
+            };
+            const label = meansLabel[step.means]?.[lang] ?? meansLabel[step.means]?.['en'] ?? `Go to`;
+            response += `   ${s + 1}. ${meansIcon} ${label} **${toName}**${landmarkStr}\n`;
+          }
+        }
+      }
     }
 
     return response.trim();

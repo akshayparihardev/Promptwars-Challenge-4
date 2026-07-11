@@ -14,6 +14,41 @@ export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
   const rejectDecision = new RejectDecisionUseCase(deps);
   const chatUseCase = new ChatUseCase(deps);
 
+  // ── Security Headers (OWASP best practices) ─────────────────
+  app.addHook('onSend', async (_req, reply, payload) => {
+    reply.header('X-Content-Type-Options', 'nosniff');
+    reply.header('X-Frame-Options', 'DENY');
+    reply.header('Referrer-Policy', 'no-referrer');
+    reply.header('X-XSS-Protection', '1; mode=block');
+    reply.header('Content-Security-Policy',
+      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'");
+    return payload;
+  });
+
+  // ── Simple Token-Bucket Rate Limiter for /api/v1/chat ───────
+  const rateBuckets = new Map<string, { tokens: number; lastRefill: number }>();
+  const RATE_LIMIT_CAPACITY = 15;   // max burst
+  const RATE_LIMIT_REFILL = 0.25;   // tokens per second (15 per minute)
+
+  function checkRateLimit(ip: string): boolean {
+    const now = Date.now();
+    let bucket = rateBuckets.get(ip);
+    if (!bucket) {
+      bucket = { tokens: RATE_LIMIT_CAPACITY, lastRefill: now };
+      rateBuckets.set(ip, bucket);
+    }
+    // Refill tokens
+    const elapsed = (now - bucket.lastRefill) / 1000;
+    bucket.tokens = Math.min(RATE_LIMIT_CAPACITY, bucket.tokens + elapsed * RATE_LIMIT_REFILL);
+    bucket.lastRefill = now;
+    // Consume
+    if (bucket.tokens >= 1) {
+      bucket.tokens -= 1;
+      return true;
+    }
+    return false;
+  }
+
   // ── POST /api/v1/events ─────────────────────────────────────
   app.post('/api/v1/events', async (req, reply) => {
     const parsed = OperationalEventCreateSchema.safeParse(req.body);
@@ -127,6 +162,14 @@ export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
 
   // ── POST /api/v1/chat ───────────────────────────────────────
   app.post('/api/v1/chat', async (req, reply) => {
+    // Rate limiting
+    const clientIp = req.ip ?? 'unknown';
+    if (!checkRateLimit(clientIp)) {
+      return reply.status(429).send({
+        error: { code: 'RATE_LIMIT', message: 'Too many requests — please wait a moment and try again.' },
+      });
+    }
+
     const parsed = ChatRequestSchema.safeParse(req.body);
     if (!parsed.success) {
       return reply.status(400).send({

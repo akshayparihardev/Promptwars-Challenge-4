@@ -187,3 +187,56 @@
     @apply bg-slate-400 dark:bg-slate-500;
   }
 }
+
+/* ── Skip Link (WCAG 2.4.1) ─────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 16px;
+  z-index: 10000;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: #113458;
+  border-radius: 0 0 8px 8px;
+  text-decoration: none;
+  transition: top 0.2s ease;
+}
+.skip-link:focus {
+  top: 0;
+  outline: 3px solid #f9a01b;
+  outline-offset: 2px;
+}
+
+/* ── High-Visibility Mode (WCAG 1.4.8) ──────────────────────── */
+.hi-vis {
+  --glass-bg: rgba(255, 255, 255, 0.98) !important;
+  --glass-border: rgba(0, 0, 0, 0.5) !important;
+}
+.hi-vis,
+.hi-vis * {
+  animation-duration: 0s !important;
+  transition-duration: 0s !important;
+  font-size-adjust: 0.58;
+}
+.hi-vis body {
+  background: #fff !important;
+  background-image: none !important;
+  color: #000 !important;
+  font-size: 18px !important;
+}
+.dark.hi-vis body {
+  background: #000 !important;
+  color: #fff !important;
+}
+.hi-vis .glass-card {
+  border-width: 2px !important;
+  border-color: #000 !important;
+  box-shadow: none !important;
+  background: #fff !important;
+}
+.dark.hi-vis .glass-card {
+  border-color: #fff !important;
+  background: #111 !important;
+}
