@@ -28,7 +28,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV AEGIS_LLM_PROVIDER=deterministic
+ENV LLM_PROVIDER=deterministic
 ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV DATABASE_URL="file:./aegis.db"
