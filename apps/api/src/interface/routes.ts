@@ -190,9 +190,10 @@ export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
 
       const result = await chatUseCase.execute(parsed.data, forceDeterministic);
       return reply.send(result);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const error = err as Error;
       return reply.status(500).send({
-        error: { code: 'INTERNAL_ERROR', message: err.message },
+        error: { code: 'INTERNAL_ERROR', message: error.message },
       });
     }
   });

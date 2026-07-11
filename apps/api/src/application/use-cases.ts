@@ -50,6 +50,10 @@ export interface UseCaseDeps {
 // IngestEventUseCase
 // ════════════════════════════════════════════════════════════════
 
+/**
+ * Use Case: IngestEvent
+ * Validates and stores incoming stadium events, and publishes them to the event bus.
+ */
 export class IngestEventUseCase {
   constructor(private readonly deps: UseCaseDeps) {}
 
@@ -86,6 +90,11 @@ export class IngestEventUseCase {
 // RunReasoningCycleUseCase
 // ════════════════════════════════════════════════════════════════
 
+/**
+ * Use Case: RunReasoningCycle
+ * Core orchestration loop that processes recent events, detects situations,
+ * computes correlations via the LLM, and generates actionable recommendations.
+ */
 export class RunReasoningCycleUseCase {
   private running = false;
 
