@@ -98,8 +98,12 @@ async function main(): Promise<void> {
   });
 
   // ── Static Frontend (for single-server / Docker deployment) ──
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
-  const distPath = path.join(__dirname, '../../web/dist');
+  const possiblePaths = [
+    path.join(process.cwd(), 'apps/web/dist'), // Docker prod
+    path.join(process.cwd(), '../web/dist'), // Local dev
+  ];
+  const { existsSync } = await import('node:fs');
+  const distPath = possiblePaths.find(p => existsSync(p)) || possiblePaths[0];
   
   await app.register(fastifyStatic, {
     root: distPath,
