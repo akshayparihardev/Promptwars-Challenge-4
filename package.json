@@ -12,6 +12,7 @@
     "dev:api": "npm run dev --workspace=apps/api",
     "dev:web": "npm run dev --workspace=apps/web",
     "build": "npm run build --workspaces",
+    "pretest": "npm run build --workspace=packages/shared",
     "test": "npm run test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "db:generate": "npm run db:generate --workspace=apps/api",

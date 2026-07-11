@@ -16,16 +16,7 @@ export function registerRoutes(app: FastifyInstance, deps: UseCaseDeps): void {
   const rejectDecision = new RejectDecisionUseCase(deps);
   const chatUseCase = new ChatUseCase(deps);
 
-  // ── Security Headers (OWASP best practices) ─────────────────
-  app.addHook('onSend', async (_req, reply, payload) => {
-    reply.header('X-Content-Type-Options', 'nosniff');
-    reply.header('X-Frame-Options', 'DENY');
-    reply.header('Referrer-Policy', 'no-referrer');
-    reply.header('X-XSS-Protection', '1; mode=block');
-    reply.header('Content-Security-Policy',
-      "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'");
-    return payload;
-  });
+  // Security handled by helmet in main.ts
 
   // ── Simple Token-Bucket Rate Limiter for /api/v1/chat ───────
   const rateBuckets = new Map<string, { tokens: number; lastRefill: number }>();

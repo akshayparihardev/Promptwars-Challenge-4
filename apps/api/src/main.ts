@@ -5,6 +5,7 @@
 
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import fastifyStatic from '@fastify/static';
 import path from 'node:path';
@@ -82,6 +83,8 @@ async function main(): Promise<void> {
       },
     },
   });
+
+  await app.register(helmet);
 
   await app.register(cors, {
     origin: config.env.frontendUrl,

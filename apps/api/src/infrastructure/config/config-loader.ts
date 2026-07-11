@@ -200,6 +200,11 @@ export interface AppConfig {
   };
 }
 
+/**
+ * Loads and validates the application configuration from environment variables and JSON files.
+ * @returns {AppConfig} The fully resolved application configuration object.
+ * @throws {Error} If required environment variables or config files are missing.
+ */
 export function loadConfig(): AppConfig {
   // ── Load config files ──
   const detectionRules = loadJson('detection-rules.json', DetectionRulesConfigSchema);

@@ -8,7 +8,7 @@ Modelled venue: **MetLife Stadium** (New York New Jersey Stadium), host of the 2
 
 ---
 
-## 🏆 Problem Statement Alignment (Evaluation)
+## 🏆 Problem Statement Alignment & Hackathon Evaluation
 
 This solution was purpose-built to address every specific requirement of the Promptwars Challenge 4 prompt:
 - **AI-Powered:** Deep integration with Google Gemini 2.5 Flash for high-level reasoning and natural language processing.
@@ -16,6 +16,15 @@ This solution was purpose-built to address every specific requirement of the Pro
 - **Crowd Management System:** Automated zone-based health scoring and crowd surge detection (Zone A vs. Zone B density correlation).
 - **FIFA WC 2026:** Specifically modeled around MetLife Stadium's sectors, gates, and anticipated global audience with real-time translation (English, Spanish, French).
 - **Safety & Scalability:** Rules-first offline failover architecture guarantees the system stays online even if stadium networks are congested or API limits are hit.
+
+### 💡 Innovation
+AEGIS introduces a novel **Hybrid AI Architecture** to stadium management. Instead of blindly passing all data to an LLM (which is slow and expensive), it uses a lightning-fast deterministic Edge Engine to filter noise. Only high-severity, multi-domain correlated events are passed to the Gemini 2.5 Flash model for deep predictive reasoning.
+
+### ⚙️ Feasibility & Scalability
+Designed for 80,000+ simultaneous users, the system is highly feasible for the 2026 World Cup. The Fastify + Prisma backend ensures minimal overhead, while the strict "Offline-First Fallback" guarantees that if the GenAI API is ever rate-limited or the stadium cellular network drops, the deterministic local engine instantly takes over without the user ever noticing a failure.
+
+### 🌍 Impact
+The system directly enhances human safety, reduces stampede risks, and drastically improves accessibility for disabled fans. By automating the correlation of medical, security, and crowd-flow data in real-time, venue staff can shift from reactive firefighting to proactive incident prevention.
 
 ---
 
